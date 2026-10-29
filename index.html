@@ -279,7 +279,7 @@ let S={projects:[],visits:[],points:[],photos:[],meetings:[],audios:[],anexos:[]
 const ui={view:'home',pid:null,vid:null,ptid:null,mid:null,tab:'pontos',newProject:false,newVisit:false,newPoint:false,confirm:null,openCoord:null,lastEixo:'agua',draft:null};
 const thumbs=new Map();
 const memFiles=new Map();
-let idb=null,saveTimer=null,storageOK=true,noWrite=false;
+let idb=null,saveTimer=null,storageOK=true,noWrite=false,storWhy='';
 const by=(a,id)=>a.find(x=>x.id===id);
 const proj=id=>by(S.projects,id);
 
@@ -307,7 +307,7 @@ function loadThumbs(){
     }catch(e){res()}
   });
 }
-async function putFile(id,blob){if(!idb){memFiles.set(id,blob);return}try{await tx('files','readwrite',s=>s.put(blob,id))}catch(e){memFiles.set(id,blob);storageOK=false}}
+async function putFile(id,blob){if(!idb){memFiles.set(id,blob);return}try{await tx('files','readwrite',s=>s.put(blob,id))}catch(e){memFiles.set(id,blob);storageOK=false;storWhy='ao guardar foto: '+(e&&(e.name||e.message)||'erro')}}
 async function getFile(id){if(memFiles.has(id))return memFiles.get(id);if(!idb)return null;try{return await tx('files','readonly',s=>s.get(id))||null}catch(e){return null}}
 async function putThumb(id,url){thumbs.set(id,url);if(idb){try{await tx('thumbs','readwrite',s=>s.put(url,id))}catch(e){}}}
 async function dropFiles(ids){
@@ -318,7 +318,7 @@ function save(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,120)}
 async function flush(){
   clearTimeout(saveTimer);
   if(!idb||noWrite)return;
-  try{await tx('meta','readwrite',s=>s.put(JSON.stringify(S),'state'))}catch(e){storageOK=false}
+  try{await tx('meta','readwrite',s=>s.put(JSON.stringify(S),'state'))}catch(e){storageOK=false;storWhy='ao gravar: '+(e&&(e.name||e.message)||'erro')}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
 window.addEventListener('pagehide',()=>{flush()});
@@ -580,6 +580,7 @@ function dictToggle(t,id,p){
   toast('Pode falar. Toque de novo para parar.');
 }
 
+const sig=()=>JSON.stringify(S).length+':'+S.photos.length;
 /* ---------- plano de numeração e nomes ---------- */
 const vIndex=v=>{const l=S.visits.filter(x=>x.projectId===v.projectId);return (proj(v.projectId).visitasAnt||0)+l.indexOf(v)+1};
 const baseName=v=>{const p=proj(v.projectId);return `${camel(p.municipio)}_${camel(p.tipo)||'Doc'}_V${pad(vIndex(v))}`};
@@ -870,6 +871,7 @@ function tExportar(v){
   </section>
   <div class="stack">
     <button class="btn primary" id="btn-zip" data-act="export-zip">${I.zip}Gerar pacote .zip</button>
+    <button class="btn" id="btn-share" data-act="share-zip">${I.zip}${ui.lastZip&&ui.lastZip.sig===sig()?'Enviar pacote pronto (toque de novo)':'Compartilhar pacote'}</button>
     <button class="btn" data-act="copy-draft">Copiar rascunho do relatório</button>
     <p class="note" id="exp-status" aria-live="polite"></p>
     ${ui.draft!=null?`<textarea class="draft" id="draft" readonly>${esc(ui.draft)}</textarea>`:''}
@@ -906,6 +908,7 @@ function vPoint(){
         <p>Na primeira vez, o celular pede permissão de <b>câmera</b> e de <b>localização</b>. Escolha permitir nas duas.</p>
         <p class="note">Se a câmera do app não abrir, o app usa a câmera do aparelho e pega a coordenada no momento do toque. Fotos escolhidas da galeria dependem da coordenada que o celular manteve na imagem; quando não há, a foto aparece como "Sem GPS" e você informa a coordenada. No pacote exportado, a coordenada e a data ficam escritas dentro da imagem.</p>
       </div></details>
+      ${ph.length?`<button class="btn" id="btn-sharep" data-act="share-photos" data-id="${pt.id}">${I.img}${ui.sharePh&&ui.sharePh.ptid===pt.id&&ui.sharePh.sig===sig()?`Enviar ${ui.sharePh.files.length} foto${ui.sharePh.files.length===1?'':'s'} (toque de novo)`:'Salvar fotos no celular'}</button>`:''}
       ${ph.length?`<div class="photos">${ph.map((x,i)=>rowPhoto(x,fm.get(x.id),i,ph.length)).join('')}</div>`:'<div class="empty">Nenhuma foto neste ponto. Use os botões abaixo para tirar uma foto agora ou anexar fotos. Quando a foto traz a posição GPS, a coordenada é lida sozinha.</div>'}
     </section>
     <section class="stack">
@@ -992,7 +995,7 @@ function render(top){
   const y=window.scrollY;
   const v={home:vHome,project:vProject,visit:vVisit,point:vPoint,meeting:vMeeting}[ui.view];
   app.innerHTML=v();
-  if(!idb||!storageOK||noWrite)app.insertAdjacentHTML('afterbegin','<div class="stor" role="alert">Este navegador não está guardando os dados: as fotos somem ao recarregar. Não use janela anônima. Gere o pacote .zip antes de sair.</div>');
+  if(!idb||!storageOK||noWrite)app.insertAdjacentHTML('afterbegin','<div class="stor" role="alert">Este navegador não está guardando os dados: as fotos somem ao recarregar. Não use janela anônima. Gere o pacote .zip antes de sair.'+(storWhy?' ('+esc(storWhy)+')':'')+'</div>');
   window.scrollTo(0,top?0:y);
 }
 function go(view,extra,top=true){Object.assign(ui,{view,confirm:null,openCoord:null,draft:null},extra||{});render(top)}
@@ -1100,9 +1103,45 @@ async function act(a,d){
       return;
     }
     case 'export-zip':return exportZip();
+    case 'share-zip':{
+      if(!(navigator.share&&navigator.canShare)){toast('Este navegador não abre o menu de compartilhar. Use "Gerar pacote .zip".');return}
+      if(ui.lastZip&&ui.lastZip.sig===sig()){
+        try{
+          if(!navigator.canShare({files:[ui.lastZip.file]})){toast('Este aparelho não aceita compartilhar arquivo .zip. Use "Gerar pacote .zip".');return}
+          await navigator.share({files:[ui.lastZip.file],title:ui.lastZip.filename});
+        }catch(e){if(!e||e.name!=='AbortError')toast('Não foi possível compartilhar. Use "Gerar pacote .zip".')}
+        return;
+      }
+      return exportZip(true);
+    }
+    case 'share-photos':{
+      const pt=by(S.points,d.id),v=by(S.visits,pt.visitId);
+      if(!(navigator.share&&navigator.canShare)){toast('Este navegador não abre o menu de compartilhar. Use o pacote .zip.');return}
+      if(ui.sharePh&&ui.sharePh.ptid===pt.id&&ui.sharePh.sig===sig()){
+        try{
+          if(!navigator.canShare({files:ui.sharePh.files})){toast('Este aparelho não aceita compartilhar tantas fotos de uma vez. Use o pacote .zip.');return}
+          await navigator.share({files:ui.sharePh.files,title:pt.nome||'Fotos'});
+        }catch(e){if(!e||e.name!=='AbortError')toast('Não foi possível compartilhar. Use o pacote .zip.')}
+        return;
+      }
+      const btn=$('#btn-sharep');if(btn)btn.disabled=true;
+      const fm=new Map(plan(v).figs.map(f=>[f.photo.id,f.file])),ph=photosOf(pt.id),files=[];let n=0;
+      for(const x of ph){
+        toast(`Preparando foto ${++n} de ${ph.length}…`,true);
+        const bl=await getFile(x.id);if(!bl)continue;
+        let out=bl,name=fm.get(x.id)||x.name;
+        if(v.carimbo!==false&&x.lat!=null){const s=await stampBlob(bl,x);if(s){out=s;name=name.replace(/\.[^.]+$/,'.jpg')}}
+        files.push(new File([out],name,{type:out.type||'image/jpeg'}));
+      }
+      if(btn)btn.disabled=false;
+      if(!files.length){toast('Nenhuma foto encontrada neste ponto.');return}
+      ui.sharePh={ptid:pt.id,files,sig:sig()};
+      if(btn)btn.lastChild.textContent=`Enviar ${files.length} foto${files.length===1?'':'s'} (toque de novo)`;
+      toast('Fotos prontas. Toque de novo no botão e escolha onde salvar.');return;
+    }
   }
 }
-async function exportZip(){
+async function exportZip(share){
   const v=by(S.visits,ui.vid),p=proj(v.projectId),pl=plan(v);
   const btn=$('#btn-zip'),st=$('#exp-status');
   const hasMeet=S.meetings.some(m=>m.visitId===v.id);
@@ -1154,15 +1193,19 @@ async function exportZip(){
       {name:`${root}/dados.json`,text:buildJson(v,pl,audioNames)}
     );
     const blob=await makeZip(E,(i,n)=>{st.textContent=`Compactando ${i} de ${n} arquivos…`});
-    const dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
-    const filename=`${root}.zip`;
-    if(dl){await dl.save({filename,data:blob})}
-    else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove()}
+    const filename=`${root}.zip`;let packed=null;
+    if(share){packed={file:new File([blob],filename,{type:'application/zip'}),filename}}
+    else{
+      const dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
+      if(dl){await dl.save({filename,data:blob})}
+      else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove()}
+    }
     v.inicioFig=pl.start;
     if(pl.figs.length)p.ultimaFigura=Math.max(p.ultimaFigura||0,pl.end);
     save();
+    if(packed){packed.sig=sig();ui.lastZip=packed;const sb=$('#btn-share');if(sb)sb.lastChild.textContent='Enviar pacote pronto (toque de novo)'}
     st.textContent=`Pacote ${filename} gerado${missing?`, mas ${missing} arquivo(s) não foram encontrados neste aparelho`:''}${stampFail?`; ${stampFail} foto(s) não puderam receber o texto e seguem como estavam`:''}. A última figura do projeto agora é ${p.ultimaFigura}.`;
-    toast('Pacote pronto.');
+    toast(share?'Pacote pronto. Toque de novo em "Enviar pacote pronto" e escolha onde salvar.':'Pacote pronto.');
   }catch(e){
     if(e&&e.code==='declined'){st.textContent='Salvamento cancelado. Nada foi alterado.'}
     else{st.textContent=`Não foi possível gerar o pacote${e&&(e.message||e.code)?': '+(e.message||e.code):''}.`}
@@ -1221,12 +1264,13 @@ function migrar(){
   let fresh=true;
   try{
     idb=await Promise.race([openDB(),new Promise(r=>setTimeout(()=>r(null),12000))]);
+    if(!idb)storWhy='o navegador não abriu o armazenamento';
     if(idb){
       try{
         const raw=await tx('meta','readonly',s=>s.get('state'));
         if(raw){const s=JSON.parse(raw);S=Object.assign({projects:[],visits:[],points:[],photos:[],meetings:[],audios:[],anexos:[],relatos:[]},s);fresh=false}
         await loadThumbs();
-      }catch(e){storageOK=false;noWrite=true}
+      }catch(e){storageOK=false;noWrite=true;storWhy='ao ler: '+(e&&(e.name||e.message)||'erro')}
     }
   }catch(e){idb=null}
   if(fresh){seed();save()}else{migrar()}
