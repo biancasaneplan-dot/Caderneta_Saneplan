@@ -505,6 +505,79 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
+/* ---------- voz: gravar áudio e ditar ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const REC={mr:null,chunks:[],stream:null,target:null,t0:0,timer:null,mime:''};
+const DIC={rec:null,key:null,base:'',stop:false};
+let wakeLock=null;
+async function keepAwake(on){try{if(on){if(navigator.wakeLock)wakeLock=await navigator.wakeLock.request('screen')}else if(wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}}
+const mmss=s=>pad(Math.floor(s/60))+':'+pad(s%60);
+function recBtn(kind,id){
+  const on=REC.target&&REC.target.kind===kind&&REC.target.id===id;
+  return `<button class="btn small${on?' danger armed':''}" data-act="rec-audio" data-kind="${kind}" data-id="${id}" id="btn-rec-${kind}-${id}">${I.mic}${on?'Parar e salvar · '+mmss(Math.round((Date.now()-REC.t0)/1000)):'Gravar áudio agora'}</button>`;
+}
+function dictBtn(t,id,p){
+  const on=DIC.key===t+'|'+id+'|'+p;
+  return `<button class="btn small${on?' danger armed':''}" data-act="dictate" data-t="${t}" data-id="${id}" data-p="${p}" id="btn-dict-${t}-${id}-${p}">${I.mic}${on?'Parar de ditar':'Ditar por voz'}</button>`;
+}
+async function recStart(kind,id){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder)){toast('Este navegador não grava áudio aqui. Use "Adicionar áudio" com o gravador do celular.');return}
+  if(REC.mr)return;
+  let st;
+  try{st=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){toast('O microfone está bloqueado para este site. Libere nas configurações do navegador.');return}
+  const tipos=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'];
+  const mime=tipos.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+  REC.stream=st;REC.chunks=[];REC.mime=mime;REC.target={kind,id};REC.t0=Date.now();
+  try{REC.mr=mime?new MediaRecorder(st,{mimeType:mime}):new MediaRecorder(st)}catch(e){st.getTracks().forEach(t=>t.stop());REC.target=null;toast('Não foi possível iniciar a gravação.');return}
+  REC.mr.ondataavailable=ev=>{if(ev.data&&ev.data.size)REC.chunks.push(ev.data)};
+  REC.mr.onstop=async()=>{
+    const tgt=REC.target,tp=REC.mr.mimeType||REC.mime||'audio/webm',ch=REC.chunks;
+    REC.stream.getTracks().forEach(t=>t.stop());clearInterval(REC.timer);keepAwake(false);
+    REC.mr=null;REC.target=null;REC.stream=null;
+    if(!ch.length){render();toast('A gravação saiu vazia.');return}
+    const ext=/mp4/.test(tp)?'m4a':/ogg/.test(tp)?'ogg':'webm';
+    const d=new Date();
+    const f=new File(ch,`Audio_${isoLocal(d.getTime()).replace(/[-:]/g,'').replace('T','_')}.${ext}`,{type:tp.split(';')[0],lastModified:d.getTime()});
+    await addAudios([f],tgt);
+  };
+  REC.mr.start(1000);keepAwake(true);
+  clearInterval(REC.timer);REC.timer=setInterval(()=>{const b=$(`#btn-rec-${kind}-${id}`);if(b)b.lastChild.textContent='Parar e salvar · '+mmss(Math.round((Date.now()-REC.t0)/1000))},500);
+  render();
+}
+function recStop(){if(REC.mr&&REC.mr.state!=='inactive')REC.mr.stop()}
+function dictToggle(t,id,p){
+  if(!SR){toast('Este navegador não tem ditado por voz. Use o microfone do teclado do celular, ou grave o áudio.');return}
+  const key=t+'|'+id+'|'+p;
+  if(DIC.rec){DIC.stop=true;try{DIC.rec.stop()}catch(e){}return}
+  const el=$(`#f-${p}-${id}`),rec=by(S[t],id);if(!el||!rec)return;
+  DIC.key=key;DIC.stop=false;
+  const iniciar=()=>{
+    const r=new SR();DIC.rec=r;r.lang='pt-BR';r.continuous=true;r.interimResults=true;
+    DIC.base=el.value.replace(/\s+$/,'');
+    r.onresult=ev=>{
+      let tx='';for(let i=0;i<ev.results.length;i++)tx+=ev.results[i][0].transcript;
+      tx=tx.trim();
+      const v=(DIC.base?DIC.base+' ':'')+tx;
+      el.value=v;rec[p]=v;save();
+    };
+    r.onerror=ev=>{
+      if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){DIC.stop=true;toast('O microfone ou o ditado está bloqueado para este site.')}
+      else if(ev.error==='network'){DIC.stop=true;toast('O ditado precisa de internet. Sem sinal, grave o áudio e transcreva depois.')}
+    };
+    r.onend=()=>{
+      if(!DIC.stop&&document.visibilityState==='visible'&&document.body.contains(el)){try{iniciar();return}catch(e){}}
+      DIC.rec=null;DIC.key=null;keepAwake(false);
+      const b=$(`#btn-dict-${t}-${id}-${p}`);if(b){b.classList.remove('danger','armed');b.lastChild.textContent='Ditar por voz'}
+      save();
+    };
+    try{r.start()}catch(e){DIC.rec=null;DIC.key=null}
+  };
+  keepAwake(true);iniciar();
+  const b=$(`#btn-dict-${t}-${id}-${p}`);if(b){b.classList.add('danger','armed');b.lastChild.textContent='Parar de ditar'}
+  toast('Pode falar. Toque de novo para parar.');
+}
+
 /* ---------- plano de numeração e nomes ---------- */
 const vIndex=v=>{const l=S.visits.filter(x=>x.projectId===v.projectId);return (proj(v.projectId).visitasAnt||0)+l.indexOf(v)+1};
 const baseName=v=>{const p=proj(v.projectId);return `${camel(p.municipio)}_${camel(p.tipo)||'Doc'}_V${pad(vIndex(v))}`};
@@ -818,6 +891,7 @@ function vPoint(){
       <button class="btn small" data-act="coord-here" data-id="${pt.id}">Usar minha localização agora</button>
       ${firstGps&&!same?`<button class="btn small" data-act="coord-from-photo" data-id="${pt.id}">Usar a coordenada da foto ${esc(firstGps.name)}</button>`:''}
       ${fld('Descrição e notas de campo',ta('points',pt.id,'descricao',pt.descricao,'placeholder="O que foi observado: estado das estruturas, problemas, vazões, o que foi dito no local"'),`f-descricao-${pt.id}`)}
+      ${dictBtn('points',pt.id,'descricao')}
     </section>
     <section class="stack">
       <div class="sec-h"><h2>Relatos</h2><button class="btn small" data-act="add-relato">${I.plus}Adicionar relato</button></div>
@@ -833,7 +907,7 @@ function vPoint(){
       ${ph.length?`<div class="photos">${ph.map((x,i)=>rowPhoto(x,fm.get(x.id),i,ph.length)).join('')}</div>`:'<div class="empty">Nenhuma foto neste ponto. Use os botões abaixo para tirar uma foto agora ou anexar fotos. Quando a foto traz a posição GPS, a coordenada é lida sozinha.</div>'}
     </section>
     <section class="stack">
-      <div class="sec-h"><h2>Notas de voz</h2><button class="btn small" data-act="add-audio" data-kind="point" data-id="${pt.id}">${I.mic}Adicionar áudio</button></div>
+      <div class="sec-h"><h2>Notas de voz</h2><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${recBtn('point',pt.id)}<button class="btn small" data-act="add-audio" data-kind="point" data-id="${pt.id}">${I.mic}Adicionar áudio</button></span></div>
       ${au.length?au.map(a=>rowAudio(a)).join(''):'<p class="note">Nenhum áudio neste ponto.</p>'}
     </section>
     ${delBtn('pt'+pt.id,'del-point',pt.id,'Excluir ponto')}
@@ -894,10 +968,11 @@ function vMeeting(){
       ${fld('Contatos',ta('meetings',m.id,'contatos',m.contatos,'style="min-height:88px" placeholder="Um por linha, com nome, cargo e WhatsApp ou e-mail. Ex.: Eduardo, Prefeitura, (19) 99999-0000"'),`f-contatos-${m.id}`)}
       <div class="field"><span class="lab">Eixos tratados</span><div class="ctl">${EK.map(k=>`<label class="chk"><input type="checkbox" data-eixo="${k}" data-id="${m.id}"${(m.eixos||[]).includes(k)?' checked':''}>${EIXOS[k].nome}</label>`).join('')}</div></div>
       ${fld('Notas da reunião',ta('meetings',m.id,'notas',m.notas,'placeholder="O que foi informado, números citados, decisões"'),`f-notas-${m.id}`)}
+      ${dictBtn('meetings',m.id,'notas')}
       ${fld('Documentos e dados que o órgão vai enviar',ta('meetings',m.id,'docs',m.docs,'placeholder="Um item por linha, com o prazo combinado quando houver"'),`f-docs-${m.id}`)}
     </section>
     <section class="stack">
-      <div class="sec-h"><h2>Áudio da reunião</h2><button class="btn small" data-act="add-audio" data-kind="meet" data-id="${m.id}">${I.mic}Adicionar áudio</button></div>
+      <div class="sec-h"><h2>Áudio da reunião</h2><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${recBtn('meet',m.id)}<button class="btn small" data-act="add-audio" data-kind="meet" data-id="${m.id}">${I.mic}Adicionar áudio</button></span></div>
       ${au.length?au.map(a=>rowAudio(a)).join(''):'<p class="note">Nenhum áudio nesta reunião.</p>'}
     </section>
     <section class="stack">
@@ -977,6 +1052,8 @@ async function act(a,d){
       if(!f){toast('Não foi possível obter a localização. Verifique a permissão de localização deste site.');return}
       const pt=by(S.points,d.id);pt.lat=f.lat;pt.lon=f.lon;save();render();toast(`Coordenada do ponto atualizada (±${Math.round(f.acc)} m).`);return;
     }
+    case 'rec-audio':if(REC.mr){recStop();return}return recStart(d.kind,d.id);
+    case 'dictate':return dictToggle(d.t,d.id,d.p);
     case 'add-audio':ui.audTarget={kind:d.kind,id:d.id};return $('#in-aud').click();
     case 'add-anexo':return $('#in-anx').click();
     case 'add-relato':S.relatos.push({id:uid(),pointId:ui.ptid,fonte:'municipe',quem:'',texto:'',order:Date.now()});save();return render();
