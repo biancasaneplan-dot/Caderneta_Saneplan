@@ -1,5 +1,5 @@
 /* Guarda o app no aparelho para abrir sem sinal. Mude VERSAO ao publicar uma atualização. */
-const VERSAO='caderneta-v2';
+const VERSAO='caderneta-v3';
 const BASE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSAO).then(c=>c.addAll(BASE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==VERSAO).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

@@ -142,6 +142,7 @@ textarea.draft{min-height:220px;font-family:var(--f-mono);font-size:12.5px}
 #cam .cmsg{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);background:#000000d0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;font-size:15px}
 #cam .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 #cam .flash.on{opacity:.55;transition:none}
+.stor{background:var(--bad);color:#fff;padding:10px 16px;font-weight:600;font-size:14px;text-align:center;position:relative;z-index:11}
 </style>
 
 <div id="app"></div>
@@ -278,7 +279,7 @@ let S={projects:[],visits:[],points:[],photos:[],meetings:[],audios:[],anexos:[]
 const ui={view:'home',pid:null,vid:null,ptid:null,mid:null,tab:'pontos',newProject:false,newVisit:false,newPoint:false,confirm:null,openCoord:null,lastEixo:'agua',draft:null};
 const thumbs=new Map();
 const memFiles=new Map();
-let idb=null,saveTimer=null,storageOK=true;
+let idb=null,saveTimer=null,storageOK=true,noWrite=false;
 const by=(a,id)=>a.find(x=>x.id===id);
 const proj=id=>by(S.projects,id);
 
@@ -313,13 +314,14 @@ async function dropFiles(ids){
   for(const id of ids){thumbs.delete(id);memFiles.delete(id);
     if(idb){try{await tx('files','readwrite',s=>s.delete(id));await tx('thumbs','readwrite',s=>s.delete(id))}catch(e){}}}
 }
-function save(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,350)}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,120)}
 async function flush(){
   clearTimeout(saveTimer);
-  if(!idb)return;
+  if(!idb||noWrite)return;
   try{await tx('meta','readwrite',s=>s.put(JSON.stringify(S),'state'))}catch(e){storageOK=false}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
+window.addEventListener('pagehide',()=>{flush()});
 
 function seed(){
   const p={id:uid(),municipio:'Casa Branca',uf:'SP',tipo:'PMSB',contratante:'Águas de Casa Branca / Prefeitura Municipal de Casa Branca',contatos:'',fonte:'Saneplan',ultimaFigura:206,visitasAnt:1,ex:true};
@@ -379,7 +381,7 @@ async function addPhotos(files,pointId,opts){
     if((pt.lat==null||pt.lon==null)&&ph.lat!=null){pt.lat=ph.lat;pt.lon=ph.lon}
   }
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-  save();render();
+  await flush();render();
   if(!opts.quiet)toast(semGps?`${files.length} foto(s) adicionada(s). ${semGps} sem coordenada.`:`${files.length} foto(s) adicionada(s) com coordenada.`);
 }
 async function addAudios(files,target){
@@ -389,7 +391,7 @@ async function addAudios(files,target){
     await putFile(id,f);
     S.audios.push({id,kind:target.kind,ownerId:target.id,name:f.name||('audio_'+id),size:f.size,order:Date.now()});
   }
-  save();render();toast(`${files.length} áudio(s) adicionado(s).`);
+  await flush();render();toast(`${files.length} áudio(s) adicionado(s).`);
 }
 
 async function addAnexos(files,mid){
@@ -403,7 +405,7 @@ async function addAnexos(files,mid){
     if(isImg){const th=await makeThumb(f);if(th)await putThumb(id,th)}
     S.anexos.push({id,meetingId:mid,name:f.name||('anexo_'+id),size:f.size,img:isImg,desc:'',order:Date.now()*10+n});
   }
-  save();render();toast(`${files.length} anexo(s) guardado(s).`);
+  await flush();render();toast(`${files.length} anexo(s) guardado(s).`);
 }
 const anexosOf=mid=>S.anexos.filter(a=>a.meetingId===mid).sort((a,b)=>a.order-b.order);
 const RELATO_FONTES={municipe:'Munícipe',gestor:'Secretário(a) ou gestor',prefeitura:'Equipe técnica da prefeitura',concessionaria:'Concessionária',equipe:'Nossa equipe',outro:'Outro'};
@@ -990,6 +992,7 @@ function render(top){
   const y=window.scrollY;
   const v={home:vHome,project:vProject,visit:vVisit,point:vPoint,meeting:vMeeting}[ui.view];
   app.innerHTML=v();
+  if(!idb||!storageOK||noWrite)app.insertAdjacentHTML('afterbegin','<div class="stor" role="alert">Este navegador não está guardando os dados: as fotos somem ao recarregar. Não use janela anônima. Gere o pacote .zip antes de sair.</div>');
   window.scrollTo(0,top?0:y);
 }
 function go(view,extra,top=true){Object.assign(ui,{view,confirm:null,openCoord:null,draft:null},extra||{});render(top)}
@@ -1217,13 +1220,13 @@ function migrar(){
 (async function init(){
   let fresh=true;
   try{
-    idb=await Promise.race([openDB(),new Promise(r=>setTimeout(()=>r(null),3000))]);
+    idb=await Promise.race([openDB(),new Promise(r=>setTimeout(()=>r(null),12000))]);
     if(idb){
       try{
         const raw=await tx('meta','readonly',s=>s.get('state'));
         if(raw){const s=JSON.parse(raw);S=Object.assign({projects:[],visits:[],points:[],photos:[],meetings:[],audios:[],anexos:[],relatos:[]},s);fresh=false}
         await loadThumbs();
-      }catch(e){storageOK=false}
+      }catch(e){storageOK=false;noWrite=true}
     }
   }catch(e){idb=null}
   if(fresh){seed();save()}else{migrar()}
