@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B5D6B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Caderneta">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Caderneta de Campo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Narrow:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: caderneta de campo, uma tela por vez, cabeçalho fixo, botões grandes para uso com uma mão.
+   Cada eixo do saneamento tem uma cor própria, usada só para identificá-lo. */
+:root{
+  --bg:#F1F5F5; --surface:#FFFFFF; --surface-2:#E7EEEE; --ink:#13292C; --ink-2:#4A6266; --line:#CAD8D9;
+  --accent:#0B5D6B; --accent-ink:#FFFFFF;
+  --good:#1D7A45; --warn:#935007; --bad:#B3261E;
+  --c-agua:#1F6DB2; --c-esgoto:#7C5A2B; --c-residuos:#8F6400; --c-drenagem:#0B8577;
+  --f-body:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-label:'Archivo Narrow','Arial Narrow',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1A1C; --surface:#142326; --surface-2:#1C2F32; --ink:#E4EFEF; --ink-2:#9BB3B6; --line:#2A4044;
+    --accent:#62C6D6; --accent-ink:#06262B;
+    --good:#58C98B; --warn:#F0A74F; --bad:#FF8A80;
+    --c-agua:#6AB0F0; --c-esgoto:#D1A46A; --c-residuos:#E2B94F; --c-drenagem:#4FD0BF;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1A1C; --surface:#142326; --surface-2:#1C2F32; --ink:#E4EFEF; --ink-2:#9BB3B6; --line:#2A4044;
+  --accent:#62C6D6; --accent-ink:#06262B;
+  --good:#58C98B; --warn:#F0A74F; --bad:#FF8A80;
+  --c-agua:#6AB0F0; --c-esgoto:#D1A46A; --c-residuos:#E2B94F; --c-drenagem:#4FD0BF;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;margin:0;min-height:100vh}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,p{margin:0}
+h1{font-size:19px;font-weight:700;line-height:1.2;text-wrap:balance}
+h2{font-family:var(--f-label);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2)}
+h3{font-size:16px;font-weight:600;line-height:1.25}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:10px;min-height:60px}
+.top .ttl{min-width:0;flex:1}
+.top .ttl h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{color:var(--ink-2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icon{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer}
+main{padding-block:18px 40px;display:flex;flex-direction:column;gap:18px}
+main.has-dock{padding-bottom:110px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.muted{color:var(--ink-2)}
+.mono{font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.btn{min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.btn.danger.armed{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.btn.small{min-height:36px;padding:0 12px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:0;border-top:1px solid var(--line);padding:13px 14px;cursor:pointer;min-height:56px}
+.row-btn:first-child{border-top:0}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.row-btn .grow{flex:1;min-width:0}
+.row-btn .grow p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{color:var(--ink-2);flex:none}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field>label,.lab{font-family:var(--f-label);font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2)}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:16px}
+textarea{min-height:110px;resize:vertical;line-height:1.4}
+input.err{border-color:var(--bad)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){.two.keep{grid-template-columns:1fr 1fr}.two:not(.keep){grid-template-columns:1fr}}
+.tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-label);font-weight:600;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--ink-2);border:0;white-space:nowrap}
+.tag.warn{background:color-mix(in srgb,var(--warn) 15%,var(--surface));color:var(--warn)}
+.tag.ok{background:color-mix(in srgb,var(--good) 15%,var(--surface));color:var(--good)}
+.tag.ex{background:transparent;border:1px dashed var(--ink-2)}
+button.tag{cursor:pointer}
+.eixo{display:inline-flex;align-items:center;gap:7px;font-family:var(--f-label);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.eixo i{width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+.e-agua{--c:var(--c-agua)}.e-esgoto{--c:var(--c-esgoto)}.e-residuos{--c:var(--c-residuos)}.e-drenagem{--c:var(--c-drenagem)}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.strip div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.strip b{font-family:var(--f-mono);font-size:18px;font-weight:500}
+.strip .eixo{font-size:11px;letter-spacing:.015em;gap:5px}
+.strip div{padding-inline:8px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:10px;padding:4px;gap:4px}
+.tabs button{min-height:42px;border:0;border-radius:7px;background:transparent;font-weight:600;color:var(--ink-2);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ph{display:grid;grid-template-columns:96px 1fr;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px}
+.ph.off{opacity:.6}
+.thumb{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:var(--surface-2);display:grid;place-items:center;color:var(--ink-2);font-size:11px;text-align:center}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fig{position:absolute;left:4px;bottom:4px;background:var(--ink);color:var(--bg);font-family:var(--f-mono);font-size:11px;padding:1px 6px;border-radius:4px}
+.ph .body{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ph input[type=text]{min-height:40px;padding:6px 10px;font-size:15px}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+.chk{display:inline-flex;align-items:center;gap:7px;min-height:34px;font-size:14px;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.mini{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;padding:0}
+.mini[disabled]{opacity:.35;cursor:default}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:10px}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--surface);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-left,0px)) calc(10px + env(safe-area-inset-bottom,0px))}
+.dock .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.issue{display:flex;gap:10px;align-items:center;justify-content:space-between;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:var(--surface);padding:11px 14px;min-height:48px;cursor:pointer}
+.issue:first-child{border-top:0}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--ink-2);background:transparent}
+.note{font-size:13px;color:var(--ink-2)}
+.files{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.files code{font-family:var(--f-mono);font-size:12.5px}
+audio{width:100%;height:40px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));max-width:min(92vw,520px);background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:10px;font-weight:500;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+textarea.draft{min-height:220px;font-family:var(--f-mono);font-size:12.5px}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+
+#cam{position:fixed;inset:0;z-index:30;background:#000;color:#fff;display:none;flex-direction:column}
+#cam.on{display:flex}
+#cam video{flex:1;min-height:0;width:100%;object-fit:cover;background:#000}
+#cam .cbar{position:absolute;left:0;right:0;top:0;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 22px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:linear-gradient(#000c,#0000)}
+#cam .cbot{position:absolute;left:0;right:0;bottom:0;padding:26px 14px calc(18px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:linear-gradient(#0000,#000c)}
+#cam .cbtn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid #ffffff88;background:#00000066;color:#fff;font-weight:600;cursor:pointer}
+#cam .cbtn.main{background:#fff;color:#000;border-color:#fff}
+#cam .shut{width:78px;height:78px;border-radius:50%;border:4px solid #fff;background:#fff;box-shadow:inset 0 0 0 5px #000;cursor:pointer;padding:0}
+#cam .shut[disabled]{opacity:.35;cursor:default}
+#cam .gchip{font-family:var(--f-mono);font-size:13px;line-height:1.35;background:#000000a0;padding:6px 10px;border-radius:8px;max-width:calc(100% - 120px)}
+#cam .gchip i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:#F0A74F}
+#cam .gchip.ok i{background:#58C98B}
+#cam .cn{font-size:14px;text-align:left}
+#cam .cmsg{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);background:#000000d0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;font-size:15px}
+#cam .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+#cam .flash.on{opacity:.55;transition:none}
+</style>
+
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="in-gal" accept="image/*" multiple hidden>
+<input type="file" id="in-cam" accept="image/*" capture="environment" hidden>
+<input type="file" id="in-aud" accept="audio/*" multiple hidden>
+<input type="file" id="in-anx" accept="application/pdf,image/*" multiple hidden>
+
+<script>
+'use strict';
+/*PURE-START*/
+const EIXOS={
+  agua:{nome:'Água',cap:'SISTEMA DE ABASTECIMENTO DE ÁGUA',tag:'Agua'},
+  esgoto:{nome:'Esgoto',cap:'SISTEMA DE ESGOTAMENTO SANITÁRIO',tag:'Esgoto'},
+  residuos:{nome:'Resíduos',cap:'MANEJO DE RESÍDUOS SÓLIDOS',tag:'Residuos'},
+  drenagem:{nome:'Drenagem',cap:'DRENAGEM E MANEJO DAS ÁGUAS PLUVIAIS',tag:'Drenagem'}
+};
+const EK=Object.keys(EIXOS);
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=(n,l=2)=>String(n).padStart(l,'0');
+const isoLocal=ms=>{const d=new Date(ms);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`};
+const fmtData=iso=>{if(!iso)return '';const [y,m,d]=iso.slice(0,10).split('-');return `${d}/${m}/${y}`};
+const extenso=iso=>{const [y,m,d]=iso.slice(0,10).split('-');return `${d} de ${MESES[+m-1]} de ${y}`};
+const sem=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const camel=s=>sem(s).split(/[^A-Za-z0-9]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join('');
+const extOf=(name,def)=>{const m=/\.([A-Za-z0-9]{2,5})$/.exec(name||'');return m?m[1].toLowerCase():def};
+const joinPt=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' e '+a[a.length-1];
+function datasExt(list){
+  const P=list.map(s=>({d:s.slice(8,10),m:+s.slice(5,7),y:s.slice(0,4)}));
+  if(P.length===1)return extenso(list[0]);
+  if(P.every(x=>x.y===P[0].y&&x.m===P[0].m))return `${joinPt(P.map(x=>x.d))} de ${MESES[P[0].m-1]} de ${P[0].y}`;
+  if(P.every(x=>x.y===P[0].y))return `${joinPt(P.map(x=>`${x.d} de ${MESES[x.m-1]}`))} de ${P[0].y}`;
+  return joinPt(list.map(extenso));
+}
+
+function parseCoord(str){
+  const t=String(str||'').replace(/[−–—]/g,'-');
+  const m=t.match(/-?\d+(?:[.,]\d+)?/g);
+  if(!m||m.length!==2) return null;
+  const lat=parseFloat(m[0].replace(',','.')), lon=parseFloat(m[1].replace(',','.'));
+  if(!isFinite(lat)||!isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180) return null;
+  return {lat,lon};
+}
+
+function readExif(buf){
+  try{
+    const v=new DataView(buf);
+    if(v.byteLength<12||v.getUint16(0)!==0xFFD8) return {has:false};
+    let o=2;
+    while(o+4<=v.byteLength){
+      const m=v.getUint16(o);
+      if(m===0xFFDA||(m&0xFF00)!==0xFF00) break;
+      const len=v.getUint16(o+2);
+      if(m===0xFFE1&&o+10<=v.byteLength&&v.getUint32(o+4)===0x45786966) return readTiff(v,o+10);
+      o+=2+len;
+    }
+  }catch(e){}
+  return {has:false};
+}
+function readTiff(v,b){
+  const out={has:true};
+  try{
+    const le=v.getUint16(b)===0x4949;
+    const g16=o=>v.getUint16(b+o,le), g32=o=>v.getUint32(b+o,le);
+    const SZ={1:1,2:1,3:2,4:4,5:8,7:1,9:4,10:8};
+    const ifd=ptr=>{const n=g16(ptr),m={};for(let i=0;i<n;i++){const e=ptr+2+i*12,t=g16(e),ty=g16(e+2),c=g32(e+4),sz=(SZ[ty]||1)*c;m[t]={ty,c,at:sz<=4?e+8:g32(e+8)};}return m};
+    const rat=(e,i)=>g32(e.at+i*8)/(g32(e.at+i*8+4)||1);
+    const str=e=>{let s='';for(let i=0;i<e.c-1;i++)s+=String.fromCharCode(v.getUint8(b+e.at+i));return s};
+    const i0=ifd(g32(4));
+    if(i0[0x8769]){
+      const ex=ifd(g32(i0[0x8769].at));
+      const d=ex[0x9003]||ex[0x9004];
+      if(d){const s=str(d);if(/^\d{4}:\d\d:\d\d \d\d:\d\d:\d\d/.test(s)) out.date=s.slice(0,19).replace(/^(\d{4}):(\d\d):(\d\d) /,'$1-$2-$3T');}
+    }
+    if(i0[0x8825]){
+      const gp=ifd(g32(i0[0x8825].at));
+      if(gp[1]&&gp[2]&&gp[3]&&gp[4]&&gp[2].c===3&&gp[4].c===3){
+        const dms=e=>rat(e,0)+rat(e,1)/60+rat(e,2)/3600;
+        let lat=dms(gp[2]),lon=dms(gp[4]);
+        if(str(gp[1])==='S') lat=-lat;
+        if(str(gp[3])==='W') lon=-lon;
+        if(isFinite(lat)&&isFinite(lon)&&!(lat===0&&lon===0)&&Math.abs(lat)<=90&&Math.abs(lon)<=180){
+          out.lat=lat;out.lon=lon;
+          if(gp[0x1F]&&gp[0x1F].ty===5){const a=rat(gp[0x1F],0);if(isFinite(a))out.acc=a;}
+        }
+      }
+    }
+  }catch(e){}
+  return out;
+}
+
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+async function makeZip(entries,onProgress){
+  const enc=new TextEncoder(),parts=[],central=[];let offset=0;
+  const d=new Date();
+  const dosTime=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
+  const dosDate=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  for(let i=0;i<entries.length;i++){
+    const e=entries[i];
+    const blob=e.blob instanceof Blob?e.blob:new Blob([e.text],{type:'text/plain'});
+    const buf=new Uint8Array(await blob.arrayBuffer());
+    const crc=crc32(buf),name=enc.encode(e.name),size=buf.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);
+    lh.setUint16(10,dosTime,true);lh.setUint16(12,dosDate,true);lh.setUint32(14,crc,true);
+    lh.setUint32(18,size,true);lh.setUint32(22,size,true);lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+    parts.push(lh.buffer,name,blob);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);
+    ch.setUint16(12,dosTime,true);ch.setUint16(14,dosDate,true);ch.setUint32(16,crc,true);
+    ch.setUint32(20,size,true);ch.setUint32(24,size,true);ch.setUint16(28,name.length,true);
+    ch.setUint32(42,offset,true);
+    central.push(ch.buffer,name);
+    offset+=30+name.length+size;
+    if(onProgress)onProgress(i+1,entries.length);
+  }
+  const cdSize=central.reduce((a,p)=>a+p.byteLength,0);
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true);end.setUint16(8,entries.length,true);end.setUint16(10,entries.length,true);
+  end.setUint32(12,cdSize,true);end.setUint32(16,offset,true);
+  return new Blob([...parts,...central,end.buffer],{type:'application/zip'});
+}
+/*PURE-END*/
+
+/* ---------- estado e armazenamento ---------- */
+const $=s=>document.querySelector(s);
+const app=$('#app');
+const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+let S={projects:[],visits:[],points:[],photos:[],meetings:[],audios:[],anexos:[],relatos:[]};
+const ui={view:'home',pid:null,vid:null,ptid:null,mid:null,tab:'pontos',newProject:false,newVisit:false,newPoint:false,confirm:null,openCoord:null,lastEixo:'agua',draft:null};
+const thumbs=new Map();
+const memFiles=new Map();
+let idb=null,saveTimer=null,storageOK=true;
+const by=(a,id)=>a.find(x=>x.id===id);
+const proj=id=>by(S.projects,id);
+
+function openDB(){
+  return new Promise(res=>{
+    try{
+      const r=indexedDB.open('caderneta-de-campo',1);
+      r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('meta');d.createObjectStore('files');d.createObjectStore('thumbs')};
+      r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);r.onblocked=()=>res(null);
+    }catch(e){res(null)}
+  });
+}
+function tx(store,mode,fn){
+  return new Promise((res,rej)=>{
+    const t=idb.transaction(store,mode);const r=fn(t.objectStore(store));
+    t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);
+  });
+}
+function loadThumbs(){
+  return new Promise(res=>{
+    try{
+      const t=idb.transaction('thumbs');const c=t.objectStore('thumbs').openCursor();
+      c.onsuccess=e=>{const cur=e.target.result;if(cur){thumbs.set(cur.key,cur.value);cur.continue()}};
+      t.oncomplete=()=>res();t.onerror=()=>res();
+    }catch(e){res()}
+  });
+}
+async function putFile(id,blob){if(!idb){memFiles.set(id,blob);return}try{await tx('files','readwrite',s=>s.put(blob,id))}catch(e){memFiles.set(id,blob);storageOK=false}}
+async function getFile(id){if(memFiles.has(id))return memFiles.get(id);if(!idb)return null;try{return await tx('files','readonly',s=>s.get(id))||null}catch(e){return null}}
+async function putThumb(id,url){thumbs.set(id,url);if(idb){try{await tx('thumbs','readwrite',s=>s.put(url,id))}catch(e){}}}
+async function dropFiles(ids){
+  for(const id of ids){thumbs.delete(id);memFiles.delete(id);
+    if(idb){try{await tx('files','readwrite',s=>s.delete(id));await tx('thumbs','readwrite',s=>s.delete(id))}catch(e){}}}
+}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,350)}
+async function flush(){
+  clearTimeout(saveTimer);
+  if(!idb)return;
+  try{await tx('meta','readwrite',s=>s.put(JSON.stringify(S),'state'))}catch(e){storageOK=false}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
+
+function seed(){
+  const p={id:uid(),municipio:'Casa Branca',uf:'SP',tipo:'PMSB',contratante:'Águas de Casa Branca / Prefeitura Municipal de Casa Branca',contatos:'',fonte:'Saneplan',ultimaFigura:206,visitasAnt:1,ex:true};
+  const v={id:uid(),projectId:p.id,titulo:'Drenagem urbana',data:today(),equipe:'',inicioFig:null,ex:true};
+  const pt={id:uid(),visitId:v.id,eixo:'drenagem',nome:'Baixada Fria · Av. José Baselone Júnior',localizacao:'Casa Branca',lat:null,lon:null,descricao:'',informante:'',ex:true};
+  const m={id:uid(),visitId:v.id,orgao:'Prefeitura · Drenagem',contatos:'',data:today(),eixos:['drenagem'],notas:'',docs:'',transcricao:'',ex:true};
+  S.projects.push(p);S.visits.push(v);S.points.push(pt);S.meetings.push(m);
+}
+
+/* ---------- fotos ---------- */
+async function makeThumb(file){
+  try{
+    let bmp;
+    try{bmp=await createImageBitmap(file,{imageOrientation:'from-image'})}catch(e){bmp=await createImageBitmap(file)}
+    const k=Math.min(1,480/Math.max(bmp.width,bmp.height));
+    const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    if(bmp.close)bmp.close();
+    return c.toDataURL('image/jpeg',0.72);
+  }catch(e){return null}
+}
+async function stampBlob(blob,ph){
+  try{
+    let bmp;
+    try{bmp=await createImageBitmap(blob,{imageOrientation:'from-image'})}catch(e){bmp=await createImageBitmap(blob)}
+    const W=bmp.width,H=bmp.height,c=document.createElement('canvas');c.width=W;c.height=H;
+    const g=c.getContext('2d');g.drawImage(bmp,0,0);if(bmp.close)bmp.close();
+    const fs=Math.max(16,Math.round(Math.min(W,H)*0.03)),pd=Math.round(fs*0.6);
+    const l1=`${ph.lat.toFixed(6)}, ${ph.lon.toFixed(6)}`;
+    const l2=ph.date?`${fmtData(ph.date)} ${ph.date.slice(11,16)}`:'';
+    g.font=`600 ${fs}px "JetBrains Mono",ui-monospace,Menlo,Consolas,monospace`;
+    const w=Math.max(g.measureText(l1).width,l2?g.measureText(l2).width:0)+pd*2;
+    const h=Math.round(fs*(l2?2.45:1.35)+pd);
+    g.fillStyle='rgba(0,0,0,0.58)';g.fillRect(0,H-h,w,h);
+    g.fillStyle='#ffffff';g.textBaseline='top';
+    g.fillText(l1,pd,H-h+pd*0.55);
+    if(l2)g.fillText(l2,pd,H-h+pd*0.55+fs*1.2);
+    return await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+  }catch(e){return null}
+}
+async function addPhotos(files,pointId,opts){
+  opts=opts||{};
+  const pt=by(S.points,pointId);if(!pt)return;
+  let n=0,semGps=0;
+  for(const f of files){
+    ++n;if(!opts.quiet)toast(`Lendo foto ${n} de ${files.length}…`,true);
+    let ex={has:false};
+    try{ex=readExif(await f.slice(0,262144).arrayBuffer())}catch(e){}
+    const id=uid();
+    const ph={id,pointId,name:f.name||('foto_'+id+'.jpg'),size:f.size,lat:ex.lat==null?null:ex.lat,lon:ex.lon==null?null:ex.lon,acc:ex.acc==null?null:ex.acc,
+      date:ex.date||opts.date||null,fileDate:f.lastModified?isoLocal(f.lastModified):null,hasExif:!!ex.has,legenda:'',tipo:'campo',usar:true,order:Date.now()*10+n};
+    await putFile(id,f);
+    const th=await makeThumb(f);if(th)await putThumb(id,th);
+    if(ph.lat==null&&opts.fix){ph.lat=opts.fix.lat;ph.lon=opts.fix.lon;ph.acc=opts.fix.acc==null?null:opts.fix.acc;ph.fonteCoord='gps-app'}
+    S.photos.push(ph);
+    if(ph.lat==null)semGps++;
+    if((pt.lat==null||pt.lon==null)&&ph.lat!=null){pt.lat=ph.lat;pt.lon=ph.lon}
+  }
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  save();render();
+  if(!opts.quiet)toast(semGps?`${files.length} foto(s) adicionada(s). ${semGps} sem coordenada.`:`${files.length} foto(s) adicionada(s) com coordenada.`);
+}
+async function addAudios(files,target){
+  if(!target)return;
+  for(const f of files){
+    const id=uid();
+    await putFile(id,f);
+    S.audios.push({id,kind:target.kind,ownerId:target.id,name:f.name||('audio_'+id),size:f.size,order:Date.now()});
+  }
+  save();render();toast(`${files.length} áudio(s) adicionado(s).`);
+}
+
+async function addAnexos(files,mid){
+  if(!by(S.meetings,mid))return;
+  let n=0;
+  for(const f of files){
+    toast(`Guardando anexo ${++n} de ${files.length}…`,true);
+    const id=uid();
+    const isImg=/^image\//.test(f.type||'')||/\.(jpe?g|png|webp|heic|gif)$/i.test(f.name||'');
+    await putFile(id,f);
+    if(isImg){const th=await makeThumb(f);if(th)await putThumb(id,th)}
+    S.anexos.push({id,meetingId:mid,name:f.name||('anexo_'+id),size:f.size,img:isImg,desc:'',order:Date.now()*10+n});
+  }
+  save();render();toast(`${files.length} anexo(s) guardado(s).`);
+}
+const anexosOf=mid=>S.anexos.filter(a=>a.meetingId===mid).sort((a,b)=>a.order-b.order);
+const RELATO_FONTES={municipe:'Munícipe',gestor:'Secretário(a) ou gestor',prefeitura:'Equipe técnica da prefeitura',concessionaria:'Concessionária',equipe:'Nossa equipe',outro:'Outro'};
+const relatosOf=ptId=>S.relatos.filter(r=>r.pointId===ptId).sort((a,b)=>a.order-b.order);
+const anexoFile=(mi,m,k,a)=>`Reuniao${pad(mi+1)}_${camel(m.orgao).slice(0,28)||'SemOrgao'}_Anexo${pad(k)}_${camel(a.desc||String(a.name).replace(/\.[^.]+$/,'')).slice(0,30)||'Arquivo'}.${extOf(a.name,a.img?'jpg':'pdf')}`;
+
+/* ---------- GPS e câmera ---------- */
+const GPS={fix:null,watch:null,err:null,subs:new Set(),
+  start(){
+    if(this.watch!=null||!navigator.geolocation)return;
+    this.fix=null;this.err=null;
+    try{this.watch=navigator.geolocation.watchPosition(
+      p=>{this.fix={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()};this.err=null;this.subs.forEach(f=>f())},
+      e=>{this.err=e.code||0;this.subs.forEach(f=>f())},
+      {enableHighAccuracy:true,maximumAge:1000,timeout:30000})}catch(e){this.err=0}
+  },
+  stop(){try{if(this.watch!=null)navigator.geolocation.clearWatch(this.watch)}catch(e){}this.watch=null},
+  once(){return new Promise(r=>{
+    if(!navigator.geolocation)return r(null);
+    try{navigator.geolocation.getCurrentPosition(
+      p=>r({lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()}),
+      ()=>r(null),{enableHighAccuracy:true,maximumAge:10000,timeout:15000})}catch(e){r(null)}
+  })}
+};
+const cam={stream:null,pt:null,n:0,busy:false,t0:0,timer:null};
+const camOK=()=>!!(window.isSecureContext&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&navigator.geolocation);
+function nativeCam(){ui.camFixP=GPS.once();$('#in-cam').click()}
+function camMsg(html){const m=$('#cam-m');if(!m)return;m.hidden=!html;m.innerHTML=html||''}
+function camTick(){
+  const g=$('#cam-g'),s=$('#cam-s'),ng=$('#cam-nogps'),n=$('#cam-n');if(!g)return;
+  const f=GPS.fix,waited=Date.now()-cam.t0;
+  if(f){g.className='gchip ok';g.innerHTML=`<i></i>${f.lat.toFixed(6)}, ${f.lon.toFixed(6)}<br>precisão ±${Math.round(f.acc)} m`}
+  else if(GPS.err===1){g.className='gchip';g.innerHTML='<i></i>Localização bloqueada para este site'}
+  else{g.className='gchip';g.innerHTML='<i></i>Aguardando o GPS…'}
+  if(s)s.disabled=!f||cam.busy||!cam.stream;
+  if(ng)ng.hidden=!!f||!cam.stream||waited<20000;
+  if(n)n.textContent=cam.n?`${cam.n} foto${cam.n===1?'':'s'}`:'';
+}
+async function openCam(ptid){
+  cam.pt=ptid;cam.n=0;cam.busy=false;cam.t0=Date.now();
+  GPS.stop();GPS.start();
+  let el=$('#cam');
+  if(!el){el=document.createElement('div');el.id='cam';el.setAttribute('role','dialog');el.setAttribute('aria-label','Câmera');document.body.appendChild(el)}
+  el.innerHTML=`<video id="cam-v" playsinline muted autoplay></video><div class="flash" id="cam-f"></div>
+    <div class="cbar"><span class="gchip" id="cam-g"></span><button class="cbtn main" data-cam="done">Concluir</button></div>
+    <div class="cmsg" id="cam-m" hidden></div>
+    <div class="cbot"><span class="cn mono" id="cam-n"></span><button class="shut" id="cam-s" data-cam="shot" aria-label="Tirar foto" disabled></button><button class="cbtn" id="cam-nogps" data-cam="nogps" hidden>Tirar sem GPS</button></div>`;
+  el.classList.add('on');document.body.style.overflow='hidden';
+  GPS.subs.add(camTick);clearInterval(cam.timer);cam.timer=setInterval(camTick,1000);camTick();
+  try{
+    cam.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:4096},height:{ideal:3072}},audio:false});
+    const v=$('#cam-v');v.srcObject=cam.stream;try{await v.play()}catch(e){}
+  }catch(e){
+    cam.stream=null;
+    const bloq=e&&(e.name==='NotAllowedError'||e.name==='SecurityError');
+    camMsg(`<p>${bloq?'A câmera foi bloqueada para este site. Libere a câmera nas configurações do navegador, ou use a câmera do aparelho (a coordenada é pega no momento do toque).':'Não foi possível abrir a câmera aqui. Use a câmera do aparelho (a coordenada é pega no momento do toque).'}</p><button class="cbtn main" data-cam="native">Usar a câmera do aparelho</button>`);
+  }
+  camTick();
+}
+function closeCam(){
+  if(cam.stream){cam.stream.getTracks().forEach(t=>t.stop());cam.stream=null}
+  clearInterval(cam.timer);GPS.subs.delete(camTick);GPS.stop();
+  const el=$('#cam');if(el){el.classList.remove('on');el.innerHTML=''}
+  document.body.style.overflow='';render();
+}
+async function shoot(noGps){
+  if(cam.busy||!cam.stream)return;
+  const fix=GPS.fix?{...GPS.fix}:null;
+  if(!fix&&!noGps)return;
+  const v=$('#cam-v');if(!v||!v.videoWidth)return;
+  cam.busy=true;camTick();
+  const f=$('#cam-f');if(f){f.classList.add('on');setTimeout(()=>f.classList.remove('on'),60)}
+  const when=Date.now();
+  try{
+    const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+    if(!blob)throw new Error('sem imagem');
+    const nome=`CAM_${isoLocal(when).replace(/[-:]/g,'').replace('T','_')}.jpg`;
+    await addPhotos([new File([blob],nome,{type:'image/jpeg',lastModified:when})],cam.pt,{fix,date:isoLocal(when),quiet:true});
+    cam.n++;
+  }catch(e){camMsg('<p>Não foi possível salvar a foto. Tente de novo.</p><button class="cbtn main" data-cam="ok">Ok</button>')}
+  cam.busy=false;camTick();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-cam]');if(!b)return;
+  const a=b.dataset.cam;
+  if(a==='shot')shoot(false);
+  else if(a==='nogps')shoot(true);
+  else if(a==='done')closeCam();
+  else if(a==='ok')camMsg('');
+  else if(a==='native'){closeCam();nativeCam()}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&$('#cam')&&$('#cam').classList.contains('on')){
+    const t=cam.stream&&cam.stream.getVideoTracks()[0];
+    if(cam.stream&&t&&t.readyState!=='live'){const p=cam.pt;closeCam();openCam(p)}
+    else{GPS.stop();GPS.start()}
+  }
+});
+
+/* ---------- plano de numeração e nomes ---------- */
+const vIndex=v=>{const l=S.visits.filter(x=>x.projectId===v.projectId);return (proj(v.projectId).visitasAnt||0)+l.indexOf(v)+1};
+const baseName=v=>{const p=proj(v.projectId);return `${camel(p.municipio)}_${camel(p.tipo)||'Doc'}_V${pad(vIndex(v))}`};
+const visitLabel=v=>`Visita ${pad(vIndex(v))} · ${v.titulo||'sem título'}`;
+const photosOf=ptId=>S.photos.filter(x=>x.pointId===ptId).sort((a,b)=>a.order-b.order);
+const audiosOf=(kind,id)=>S.audios.filter(a=>a.kind===kind&&a.ownerId===id).sort((a,b)=>a.order-b.order);
+const startFig=v=>v.inicioFig!=null?v.inicioFig:((proj(v.projectId).ultimaFigura||0)+1);
+
+function plan(v){
+  const p=proj(v.projectId),start=startFig(v),base=baseName(v);
+  const groups=[],figs=[],unused=[];let n=start;
+  for(const ex of EK){
+    const items=[];
+    S.points.filter(x=>x.visitId===v.id&&x.eixo===ex).forEach((pt,i)=>{
+      const mine=[];
+      for(const ph of photosOf(pt.id)){
+        const year=(ph.date||v.data||'').slice(0,4);
+        const ext=(v.carimbo!==false&&ph.usar&&ph.lat!=null)?'jpg':extOf(ph.name,'jpg');
+        if(ph.usar){
+          const leg=String(ph.legenda||'').trim().replace(/[.\s]+$/,'')||'[legenda pendente]';
+          const f={n,photo:ph,point:pt,eixo:ex,pn:i+1,year,
+            file:`${base}_${EIXOS[ex].tag}_Fig${pad(n,3)}.${ext}`,
+            caption:`Figura ${n}: ${ph.tipo==='drone'?'Imagem de drone: ':''}${leg}. Fonte: ${p.fonte||'Saneplan'} (${year}).`};
+          figs.push(f);mine.push(f);n++;
+        }else{
+          unused.push({photo:ph,point:pt,file:`${base}_${EIXOS[ex].tag}_P${pad(i+1)}_${camel(ph.name.replace(/\.[^.]+$/,'')).slice(0,30)||ph.id}.${ext}`});
+        }
+      }
+      items.push({pt,pn:i+1,figs:mine});
+    });
+    if(items.length)groups.push({eixo:ex,items});
+  }
+  return {start,end:n-1,groups,figs,unused,base};
+}
+function issues(v){
+  const out=[];
+  S.points.filter(x=>x.visitId===v.id).forEach(pt=>{
+    const ph=photosOf(pt.id),use=ph.filter(x=>x.usar);
+    const nm=pt.nome||'Ponto sem nome';
+    if(pt.lat==null)out.push({k:'point',id:pt.id,t:`${nm}: sem coordenada`});
+    if(!String(pt.descricao||'').trim())out.push({k:'point',id:pt.id,t:`${nm}: sem descrição`});
+    if(!ph.length)out.push({k:'point',id:pt.id,t:`${nm}: sem fotos`});
+    const sl=use.filter(x=>!String(x.legenda||'').trim()).length;
+    if(sl)out.push({k:'point',id:pt.id,t:`${nm}: ${sl} foto(s) sem legenda`});
+    const sg=use.filter(x=>x.lat==null).length;
+    if(sg)out.push({k:'point',id:pt.id,t:`${nm}: ${sg} foto(s) sem coordenada`});
+  });
+  S.meetings.filter(m=>m.visitId===v.id).forEach(m=>{
+    if(!String(m.notas||'').trim()&&!String(m.transcricao||'').trim())out.push({k:'meet',id:m.id,t:`Reunião ${m.orgao||'sem órgão'}: sem notas nem transcrição`});
+  });
+  return out;
+}
+
+/* ---------- documentos de saída ---------- */
+const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+const coordTxt=(la,lo)=>la==null?'':`${la.toFixed(6)}, ${lo.toFixed(6)}`;
+function datasDoPonto(v,fs){
+  const d=[...new Set(fs.map(f=>(f.photo.date||'').slice(0,10)).filter(Boolean))].sort();
+  return d.length?d:[v.data];
+}
+function buildMd(v,pl){
+  const p=proj(v.projectId),L=[];
+  L.push(`# Relatório fotográfico · Visita técnica do município de ${p.municipio}`,'');
+  L.push(`- Projeto: ${p.tipo} · ${visitLabel(v)}`,`- Data da visita: ${fmtData(v.data)}`);
+  if(p.contratante)L.push(`- Contratante: ${p.contratante}`);
+  if(p.contatos)L.push(`- Contatos: ${p.contatos}`);
+  if(v.equipe)L.push(`- Equipe: ${v.equipe}`);
+  L.push(`- Figuras desta visita: ${pl.figs.length?`${pl.start} a ${pl.end}`:'nenhuma'}`,'');
+  for(const g of pl.groups){
+    L.push(`# ${EIXOS[g.eixo].cap}`,'');
+    for(const it of g.items){
+      const pt=it.pt;
+      L.push(`### Ponto ${it.pn}: ${pt.nome||'[nome pendente]'}`,'');
+      L.push(`- Localização: ${pt.localizacao||'[localização pendente]'}`);
+      L.push(`- Coordenadas geográficas: ${pt.lat==null?'[coordenada pendente]':coordTxt(pt.lat,pt.lon)}`);
+      L.push('- Descrição:','',String(pt.descricao||'').trim()||'[descrição pendente]','');
+      const rl=relatosOf(pt.id).filter(r=>String(r.texto||'').trim()||String(r.quem||'').trim());
+      if(rl.length){
+        L.push('- Relatos:','');
+        rl.forEach(r=>L.push(`  - ${RELATO_FONTES[r.fonte]||'Outro'}${String(r.quem||'').trim()?` (${String(r.quem).trim()})`:''}: ${String(r.texto||'').trim().replace(/\s*\n+\s*/g,' ')||'[relato pendente]'}`));
+        L.push('');
+      }
+      for(const a of audiosOf('point',pt.id))L.push(`- Nota de voz: ${a.name}`);
+      if(it.figs.length){
+        const ds=datasDoPonto(v,it.figs);
+        L.push(`A seguir, apresenta-se o registro fotográfico do diagnóstico técnico realizado ${ds.length>1?'nos dias':'no dia'} ${datasExt(ds)}.`,'');
+        L.push('|  |  |  |','| :-: | :-: | :-: |');
+        for(let i=0;i<it.figs.length;i+=3){
+          const row=it.figs.slice(i,i+3).map(f=>f.caption.replace(/\|/g,'\\|'));
+          while(row.length<3)row.push('');
+          L.push('| '+row.join(' | ')+' |');
+        }
+        L.push('');
+      }
+    }
+  }
+  const ms=S.meetings.filter(m=>m.visitId===v.id);
+  if(ms.length){
+    L.push('# INFORMAÇÕES LEVANTADAS COM ÓRGÃOS E SECRETARIAS','');
+    ms.forEach((m,i)=>{
+      L.push(`### Reunião ${i+1}: ${m.orgao||'[órgão pendente]'} (${fmtData(m.data)})`,'');
+      if(String(m.contatos||'').trim()){L.push('- Contatos:');String(m.contatos).split('\n').map(s=>s.trim()).filter(Boolean).forEach(s=>L.push(`  - ${s}`))}
+      if((m.eixos||[]).length)L.push(`- Eixos: ${m.eixos.map(e=>EIXOS[e].nome).join(', ')}`);
+      L.push('- Notas:','',String(m.notas||'').trim()||'[notas pendentes]','');
+      if(String(m.docs||'').trim())L.push('- Documentos e dados que o órgão vai enviar:','',m.docs.trim(),'');
+      audiosOf('meet',m.id).forEach(a=>L.push(`- Áudio: ${a.name}`));
+      anexosOf(m.id).forEach((a,k)=>L.push(`- Anexo recebido: ${a.desc?a.desc+' · ':''}anexos/${anexoFile(i,m,k+1,a)}`));
+      if(String(m.transcricao||'').trim())L.push(`- Transcrição: arquivo em transcricoes/`);
+      L.push('');
+    });
+  }
+  const is=issues(v);
+  if(is.length){L.push('# PENDÊNCIAS DO LEVANTAMENTO','');is.forEach(x=>L.push(`- ${x.t}`));L.push('')}
+  return L.join('\n');
+}
+function buildCsv(v,pl){
+  const p=proj(v.projectId);
+  const H=['figura','arquivo','arquivo_original','eixo','ponto','latitude','longitude','precisao_m','data_hora','tipo','legenda','fonte','usada_no_relatorio'];
+  const rows=[H.map(q).join(',')];
+  const row=(f,usada)=>[f.n==null?'':f.n,f.file,f.photo.name,EIXOS[f.point.eixo].nome,f.point.nome,f.photo.lat==null?'':f.photo.lat.toFixed(6),f.photo.lon==null?'':f.photo.lon.toFixed(6),
+    f.photo.acc==null?'':Math.round(f.photo.acc*10)/10,f.photo.date||'',f.photo.tipo,f.photo.legenda||'',`${p.fonte||'Saneplan'} (${(f.photo.date||v.data).slice(0,4)})`,usada?'sim':'nao'];
+  pl.figs.forEach(f=>rows.push(row(f,true).map(q).join(',')));
+  pl.unused.forEach(u=>rows.push(row({n:null,file:'nao_usadas/'+u.file,photo:u.photo,point:u.point},false).map(q).join(',')));
+  return rows.join('\n');
+}
+function buildPontosCsv(v,pl){
+  const rows=[['ponto','eixo','nome','localizacao','latitude','longitude','primeira_figura','ultima_figura','n_fotos'].map(q).join(',')];
+  for(const g of pl.groups)for(const it of g.items){
+    const f=it.figs;
+    rows.push([it.pn,EIXOS[g.eixo].nome,it.pt.nome,it.pt.localizacao,it.pt.lat==null?'':it.pt.lat.toFixed(6),it.pt.lon==null?'':it.pt.lon.toFixed(6),f.length?f[0].n:'',f.length?f[f.length-1].n:'',f.length].map(q).join(','));
+  }
+  return rows.join('\n');
+}
+function buildGeo(v,pl){
+  const p=proj(v.projectId);
+  const feats=pl.figs.filter(f=>f.photo.lat!=null).map(f=>({type:'Feature',geometry:{type:'Point',coordinates:[+f.photo.lon.toFixed(6),+f.photo.lat.toFixed(6)]},
+    properties:{figura:f.n,arquivo:f.file,eixo:EIXOS[f.eixo].nome,ponto:f.point.nome,legenda:f.photo.legenda||'',data_hora:f.photo.date||'',tipo:f.photo.tipo,fonte:`${p.fonte||'Saneplan'} (${f.year})`}}));
+  return JSON.stringify({type:'FeatureCollection',name:pl.base,crs:{type:'name',properties:{name:'urn:ogc:def:crs:OGC:1.3:CRS84'}},features:feats},null,1);
+}
+function buildJson(v,pl,audioNames){
+  const p=proj(v.projectId);
+  return JSON.stringify({gerado_em:isoLocal(Date.now()),projeto:{municipio:p.municipio,uf:p.uf,tipo:p.tipo,contratante:p.contratante,contatos:p.contatos,fonte:p.fonte},
+    visita:{titulo:v.titulo,data:v.data,equipe:v.equipe,figura_inicial:pl.start,figura_final:pl.end},
+    pontos:pl.groups.flatMap(g=>g.items.map(it=>({eixo:g.eixo,numero:it.pn,nome:it.pt.nome,localizacao:it.pt.localizacao,latitude:it.pt.lat,longitude:it.pt.lon,relatos:relatosOf(it.pt.id).map(r=>({fonte:RELATO_FONTES[r.fonte]||'Outro',quem:r.quem,texto:r.texto})),descricao:it.pt.descricao,figuras:it.figs.map(f=>f.n)}))),
+    figuras:pl.figs.map(f=>({numero:f.n,arquivo:f.file,original:f.photo.name,latitude:f.photo.lat,longitude:f.photo.lon,data_hora:f.photo.date,tipo:f.photo.tipo,legenda:f.photo.legenda,ponto:f.point.nome,eixo:f.eixo})),
+    reunioes:S.meetings.filter(m=>m.visitId===v.id).map((m,mi)=>({orgao:m.orgao,contatos:String(m.contatos||'').split('\n').map(s=>s.trim()).filter(Boolean),data:m.data,eixos:m.eixos,notas:m.notas,documentos_a_receber:m.docs,audios:audioNames[m.id]||[],anexos:anexosOf(m.id).map((a,k)=>({arquivo:'anexos/'+anexoFile(mi,m,k+1,a),descricao:a.desc,original:a.name}))}))},null,1);
+}
+
+/* ---------- interface ---------- */
+const svg=p=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const I={
+  back:svg('<path d="M15 18l-6-6 6-6"/>'),
+  chev:svg('<path d="M9 6l6 6-6 6"/>'),
+  cam:svg('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  img:svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>'),
+  mic:svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
+  up:svg('<path d="M6 15l6-6 6 6"/>'),
+  down:svg('<path d="M6 9l6 6 6-6"/>'),
+  trash:svg('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'),
+  plus:svg('<path d="M12 5v14M5 12h14"/>'),
+  zip:svg('<path d="M12 3v12M7 11l5 5 5-5M4 20h16"/>')
+};
+const eixoTag=k=>`<span class="eixo e-${k}"><i></i>${EIXOS[k].nome}</span>`;
+const fld=(label,inner,id)=>`<div class="field"><label${id?` for="${id}"`:''}>${label}</label>${inner}</div>`;
+const inp=(t,id,p,val,extra='')=>`<input type="text" id="f-${p}-${id}" data-t="${t}" data-id="${id}" data-p="${p}" value="${esc(val)}" ${extra}>`;
+const ta=(t,id,p,val,extra='')=>`<textarea id="f-${p}-${id}" data-t="${t}" data-id="${id}" data-p="${p}" ${extra}>${esc(val)}</textarea>`;
+
+function header(title,sub,back){
+  return `<header class="top"><div class="wrap">${back?`<button class="icon" data-act="back" aria-label="Voltar">${I.back}</button>`:''}<div class="ttl"><h1>${esc(title)}</h1>${sub?`<p class="sub">${esc(sub)}</p>`:''}</div></div></header>`;
+}
+function sure(key){
+  if(ui.confirm===key){ui.confirm=null;return true}
+  ui.confirm=key;render();clearTimeout(ui.ct);ui.ct=setTimeout(()=>{ui.confirm=null;render()},4000);return false;
+}
+const delBtn=(key,act,id,label)=>`<button class="btn danger${ui.confirm===key?' armed':''}" data-act="${act}" data-id="${id}">${I.trash}${ui.confirm===key?'Toque de novo para excluir':label}</button>`;
+
+function vHome(){
+  const cards=S.projects.map(p=>{
+    const nv=S.visits.filter(v=>v.projectId===p.id).length;
+    return `<button class="row-btn" data-act="open-project" data-id="${p.id}"><div class="grow"><h3>${esc(p.municipio)}${p.uf?` · ${esc(p.uf)}`:''}</h3><p class="muted">${esc(p.contratante||'Contratante não informado')}</p></div><div class="stack" style="gap:4px;align-items:flex-end"><span class="meta"><span class="tag">${esc(p.tipo)}</span>${p.ex?'<span class="tag ex">Exemplo</span>':''}</span><span class="mono muted">${nv} visita${nv===1?'':'s'} · fig. ${p.ultimaFigura||0}</span></div><span class="chev">${I.chev}</span></button>`;
+  }).join('');
+  return header('Caderneta de campo','Visitas técnicas por município',false)+`<main class="wrap">
+    <p class="muted">Cada visita reúne pontos com fotos e coordenadas, notas e áudios das reuniões. No fim, o pacote exportado já vem com figuras numeradas, legendas e o rascunho do relatório.</p>
+    ${S.projects.length?`<div class="list">${cards}</div>`:'<div class="empty">Nenhum projeto ainda. Crie um para cada município e documento, como o PMSB de um município ou o PGIRS de outro.</div>'}
+    ${ui.newProject?`<section class="card stack">
+      <h2>Novo projeto</h2>
+      ${fld('Município',`<input type="text" id="np-mun" placeholder="Casa Branca" autocomplete="off">`,'np-mun')}
+      <div class="two keep">${fld('UF',`<input type="text" id="np-uf" maxlength="2" placeholder="SP" autocapitalize="characters">`,'np-uf')}${fld('Documento',`<input type="text" id="np-tipo" list="tipos" value="PMSB">`,'np-tipo')}</div>
+      <datalist id="tipos"><option value="PMSB"><option value="PGIRS"><option value="PMGIRS"><option value="Outro"></datalist>
+      ${fld('Contratante',`<input type="text" id="np-con" placeholder="Prefeitura Municipal de…">`,'np-con')}
+      <div class="two"><button class="btn primary" data-act="create-project">Criar projeto</button><button class="btn" data-act="new-project">Cancelar</button></div>
+    </section>`:`<button class="btn primary" data-act="new-project">${I.plus}Novo projeto</button>`}
+    <p class="note">${storageOK&&idb?'Neste protótipo os dados ficam só neste navegador. Exporte o pacote da visita antes de limpar os dados do navegador.':'Este navegador não permite guardar dados. Exporte o pacote antes de fechar a página.'}</p>
+  </main>`;
+}
+
+function vProject(){
+  const p=proj(ui.pid);
+  const vs=S.visits.filter(v=>v.projectId===p.id);
+  const rows=vs.map(v=>{
+    const pts=S.points.filter(x=>x.visitId===v.id),np=S.photos.filter(x=>pts.some(t=>t.id===x.pointId)).length,nm=S.meetings.filter(m=>m.visitId===v.id).length;
+    return `<button class="row-btn" data-act="open-visit" data-id="${v.id}"><div class="grow"><h3>${esc(visitLabel(v))}</h3><p class="muted">${fmtData(v.data)} · ${pts.length} ponto${pts.length===1?'':'s'} · ${np} foto${np===1?'':'s'} · ${nm} reunião(ões)</p></div>${v.ex?'<span class="tag ex">Exemplo</span>':''}<span class="chev">${I.chev}</span></button>`;
+  }).join('');
+  return header(p.municipio,`${p.tipo}${p.contratante?' · '+p.contratante:''}`,true)+`<main class="wrap">
+    <section class="stack"><div class="sec-h"><h2>Visitas</h2></div>
+      ${vs.length?`<div class="list">${rows}</div>`:'<div class="empty">Nenhuma visita registrada neste projeto.</div>'}
+      ${ui.newVisit?`<div class="card stack">
+        ${fld('Título da visita',`<input type="text" id="nv-tit" placeholder="Drenagem urbana">`,'nv-tit')}
+        ${fld('Data',`<input type="date" id="nv-data" value="${today()}">`,'nv-data')}
+        <div class="two"><button class="btn primary" data-act="create-visit">Criar visita</button><button class="btn" data-act="new-visit">Cancelar</button></div>
+      </div>`:`<button class="btn primary" data-act="new-visit">${I.plus}Nova visita</button>`}
+    </section>
+    <section class="card stack">
+      <h2>Dados do relatório</h2>
+      ${fld('Contratante',inp('projects',p.id,'contratante',p.contratante),`f-contratante-${p.id}`)}
+      ${fld('Contatos',inp('projects',p.id,'contatos',p.contatos,'placeholder="Nomes e cargos"'),`f-contatos-${p.id}`)}
+      <div class="two keep">
+        ${fld('Fonte das fotos',inp('projects',p.id,'fonte',p.fonte,'placeholder="Saneplan"'),`f-fonte-${p.id}`)}
+        ${fld('Última figura usada',`<input type="number" inputmode="numeric" min="0" id="f-uf-${p.id}" data-t="projects" data-id="${p.id}" data-p="ultimaFigura" data-num="1" value="${p.ultimaFigura||0}">`,`f-uf-${p.id}`)}
+      </div>
+      ${fld('Visitas já feitas antes de usar o app',`<input type="number" inputmode="numeric" min="0" id="f-va-${p.id}" data-t="projects" data-id="${p.id}" data-p="visitasAnt" data-num="1" value="${p.visitasAnt||0}">`,`f-va-${p.id}`)}
+      <p class="note">A próxima visita exportada começa a numerar na figura ${(p.ultimaFigura||0)+1}. Ajuste os dois números quando o relatório já tiver figuras e visitas anteriores.</p>
+    </section>
+    ${delBtn('proj'+p.id,'del-project',p.id,'Excluir projeto')}
+  </main>`;
+}
+
+function vVisit(){
+  const v=by(S.visits,ui.vid),p=proj(v.projectId);
+  const pts=S.points.filter(x=>x.visitId===v.id);
+  const cnt=k=>S.photos.filter(x=>pts.some(t=>t.id===x.pointId&&t.eixo===k)).length;
+  const ms=S.meetings.filter(m=>m.visitId===v.id);
+  const tabs=[['pontos',`Pontos (${pts.length})`],['reunioes',`Reuniões (${ms.length})`],['exportar','Exportar']];
+  let body='';
+  if(ui.tab==='pontos')body=tPontos(v,pts);
+  else if(ui.tab==='reunioes')body=tReunioes(v,ms);
+  else body=tExportar(v);
+  return header(visitLabel(v),`${p.municipio} · ${p.tipo} · ${fmtData(v.data)}`,true)+`<main class="wrap">
+    <div class="strip" aria-label="Fotos por eixo">${EK.map(k=>`<div><span class="eixo e-${k}"><i></i>${EIXOS[k].nome}</span><b>${cnt(k)}</b></div>`).join('')}</div>
+    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${ui.tab===k}" data-act="tab" data-id="${k}">${l}</button>`).join('')}</div>
+    ${body}
+  </main>`;
+}
+function tPontos(v,pts){
+  let h='';
+  for(const k of EK){
+    const list=pts.filter(x=>x.eixo===k);if(!list.length)continue;
+    h+=`<section class="stack"><div class="sec-h">${eixoTag(k)}<span class="muted mono">${list.length}</span></div><div class="list">${list.map((pt,i)=>{
+      const n=photosOf(pt.id).length;
+      return `<button class="row-btn" data-act="open-point" data-id="${pt.id}"><span class="mono muted">P${pad(i+1)}</span><div class="grow"><h3>${esc(pt.nome||'Ponto sem nome')}</h3><p class="mono muted">${pt.lat==null?'sem coordenada':coordTxt(pt.lat,pt.lon)}</p></div>${pt.ex?'<span class="tag ex">Exemplo</span>':''}<span class="tag">${n} foto${n===1?'':'s'}</span><span class="chev">${I.chev}</span></button>`}).join('')}</div></section>`;
+  }
+  if(!pts.length)h='<div class="empty">Crie um ponto para cada local visitado, como uma ETA, uma boca de lobo, um ecoponto ou uma elevatória. As fotos e as notas ficam dentro do ponto.</div>';
+  const form=ui.newPoint?`<section class="card stack">
+      ${fld('Nome do ponto',`<input type="text" id="npt-nome" placeholder="ETA Venda Branca">`,'npt-nome')}
+      ${fld('Eixo',`<select id="npt-eixo">${EK.map(k=>`<option value="${k}"${k===ui.lastEixo?' selected':''}>${EIXOS[k].nome}</option>`).join('')}</select>`,'npt-eixo')}
+      <div class="two"><button class="btn primary" data-act="create-point">Criar e abrir</button><button class="btn" data-act="new-point">Cancelar</button></div>
+    </section>`:`<button class="btn primary" data-act="new-point">${I.plus}Novo ponto</button>`;
+  return h+form+`<details class="card"><summary style="cursor:pointer;font-weight:600;min-height:32px">Dados da visita</summary><div class="stack" style="margin-top:12px">
+    ${fld('Título',inp('visits',v.id,'titulo',v.titulo),`f-titulo-${v.id}`)}
+    <div class="two">${fld('Data',`<input type="date" id="f-data-${v.id}" data-t="visits" data-id="${v.id}" data-p="data" value="${esc(v.data)}">`,`f-data-${v.id}`)}${fld('Equipe',inp('visits',v.id,'equipe',v.equipe,'placeholder="Quem foi a campo"'),`f-equipe-${v.id}`)}</div>
+    ${delBtn('vis'+v.id,'del-visit',v.id,'Excluir visita')}
+  </div></details>`;
+}
+function tReunioes(v,ms){
+  return `${ms.length?`<div class="list">${ms.map(m=>{const na=audiosOf('meet',m.id).length,nx=anexosOf(m.id).length;return `<button class="row-btn" data-act="open-meeting" data-id="${m.id}"><div class="grow"><h3>${esc(m.orgao||'Reunião sem órgão')}</h3><p class="muted">${fmtData(m.data)}${m.contatos?' · '+esc(String(m.contatos).split('\n')[0]):''}</p></div>${m.ex?'<span class="tag ex">Exemplo</span>':''}${na?`<span class="tag">${na} áudio${na===1?'':'s'}</span>`:''}${nx?`<span class="tag">${nx} anexo${nx===1?'':'s'}</span>`:''}<span class="chev">${I.chev}</span></button>`}).join('')}</div>`:'<div class="empty">Registre aqui as conversas com secretarias e concessionárias: quem falou, o que foi informado, o que foi pedido e o áudio da reunião.</div>'}
+  <button class="btn primary" data-act="new-meeting">${I.plus}Nova reunião</button>`;
+}
+function tExportar(v){
+  const pl=plan(v),is=issues(v);
+  const nUsed=pl.figs.length,nOut=pl.unused.length;
+  const bytes=[...pl.figs.map(f=>f.photo.size),...pl.unused.map(u=>u.photo.size)].reduce((a,b)=>a+(b||0),0);
+  const mb=(bytes/1048576).toFixed(1).replace('.',',');
+  return `<section class="stack"><h2>Pendências</h2>
+    ${is.length?`<div class="list">${is.map((x,i)=>`<button class="issue" data-act="goto-issue" data-i="${i}"><span>${esc(x.t)}</span><span class="tag warn">Abrir</span></button>`).join('')}</div>`:'<div class="card"><span class="tag ok">Tudo preenchido</span></div>'}
+    <p class="note">Pendências não impedem a exportação. No rascunho, elas aparecem entre colchetes, como [legenda pendente].</p>
+  </section>
+  <section class="card stack"><h2>Numeração das figuras</h2>
+    ${fld('Primeira figura desta visita',`<input type="number" inputmode="numeric" min="1" id="f-inicio-${v.id}" data-t="visits" data-id="${v.id}" data-p="inicioFig" data-num="1" data-rerender="1" value="${pl.start}">`,`f-inicio-${v.id}`)}
+    <p class="muted">${nUsed?`${nUsed} figura${nUsed===1?'':'s'}, da ${pl.start} à ${pl.end}.`:'Nenhuma foto marcada para o relatório.'}${nOut?` ${nOut} foto${nOut===1?'':'s'} fora do relatório.`:''} Total de ${mb} MB em fotos.</p>
+  </section>
+  <section class="card stack"><h2>Fotos no pacote</h2>
+    <label class="chk"><input type="checkbox" data-t="visits" data-id="${v.id}" data-p="carimbo"${v.carimbo!==false?' checked':''}>Escrever a coordenada e a data dentro da foto</label>
+    <label class="chk"><input type="checkbox" data-t="visits" data-id="${v.id}" data-p="originais"${v.originais?' checked':''}>Guardar também as originais, sem texto (usa o dobro de espaço)</label>
+    <p class="note">${pl.figs.filter(f=>f.photo.lat==null).length} foto(s) do relatório estão sem coordenada e ficam sem o texto. As fotos com texto são salvas em JPG.</p>
+  </section>
+  <section class="card stack"><h2>O pacote traz</h2>
+    <ul class="files"><li><code>relatorio_rascunho.md</code> com capítulos por eixo, pontos, legendas e fonte</li><li><code>fotos/</code> renomeadas com a numeração acima</li><li><code>fotos.csv</code>, <code>pontos.csv</code> e <code>fotos.geojson</code> para o QGIS</li><li><code>audios/</code>, <code>anexos/</code> (PDFs e imagens recebidos nas reuniões), <code>transcricoes/</code> e <code>dados.json</code></li></ul>
+  </section>
+  <div class="stack">
+    <button class="btn primary" id="btn-zip" data-act="export-zip">${I.zip}Gerar pacote .zip</button>
+    <button class="btn" data-act="copy-draft">Copiar rascunho do relatório</button>
+    <p class="note" id="exp-status" aria-live="polite"></p>
+    ${ui.draft!=null?`<textarea class="draft" id="draft" readonly>${esc(ui.draft)}</textarea>`:''}
+  </div>`;
+}
+
+function vPoint(){
+  const pt=by(S.points,ui.ptid),v=by(S.visits,pt.visitId);
+  const fm=new Map(plan(v).figs.map(f=>[f.photo.id,f.n]));
+  const ph=photosOf(pt.id),au=audiosOf('point',pt.id);
+  const firstGps=ph.find(x=>x.lat!=null);
+  const same=firstGps&&pt.lat===firstGps.lat&&pt.lon===firstGps.lon;
+  return header(pt.nome||'Novo ponto',`${EIXOS[pt.eixo].nome} · ${visitLabel(v)}`,true)+`<main class="wrap has-dock">
+    <section class="card stack">
+      ${fld('Nome do ponto',inp('points',pt.id,'nome',pt.nome,'placeholder="ETA Venda Branca"'),`f-nome-${pt.id}`)}
+      <div class="two">
+        ${fld('Eixo',`<select id="f-eixo-${pt.id}" data-t="points" data-id="${pt.id}" data-p="eixo" data-rerender="1">${EK.map(k=>`<option value="${k}"${k===pt.eixo?' selected':''}>${EIXOS[k].nome}</option>`).join('')}</select>`,`f-eixo-${pt.id}`)}
+        ${fld('Localização',inp('points',pt.id,'localizacao',pt.localizacao,'placeholder="Bairro ou distrito"'),`f-localizacao-${pt.id}`)}
+      </div>
+      ${fld('Coordenadas (latitude, longitude)',`<input type="text" id="pt-coord" class="mono" data-coord="point" data-id="${pt.id}" inputmode="text" value="${coordTxt(pt.lat,pt.lon)}" placeholder="-21.948286, -47.120197" autocomplete="off">`,'pt-coord')}
+      <button class="btn small" data-act="coord-here" data-id="${pt.id}">Usar minha localização agora</button>
+      ${firstGps&&!same?`<button class="btn small" data-act="coord-from-photo" data-id="${pt.id}">Usar a coordenada da foto ${esc(firstGps.name)}</button>`:''}
+      ${fld('Descrição e notas de campo',ta('points',pt.id,'descricao',pt.descricao,'placeholder="O que foi observado: estado das estruturas, problemas, vazões, o que foi dito no local"'),`f-descricao-${pt.id}`)}
+    </section>
+    <section class="stack">
+      <div class="sec-h"><h2>Relatos</h2><button class="btn small" data-act="add-relato">${I.plus}Adicionar relato</button></div>
+      ${relatosOf(pt.id).length?relatosOf(pt.id).map(r=>rowRelato(r)).join(''):'<p class="note">Registre aqui o que foi contado no local: relato de morador, de secretário, da equipe técnica da prefeitura ou da concessionária.</p>'}
+    </section>
+    <section class="stack">
+      <div class="sec-h"><h2>Fotos</h2><span class="muted mono">${ph.length} · ${ph.filter(x=>x.usar).length} no relatório</span></div>
+      <details class="card"><summary style="cursor:pointer;font-weight:600;min-height:32px">Como a coordenada é gravada</summary><div class="stack" style="margin-top:10px;gap:8px">
+        <p>Ao tocar em <b>Tirar foto agora</b>, a câmera abre dentro do app e o GPS do celular é lido no mesmo instante. A coordenada, a precisão e a hora ficam guardadas na foto, sem digitar nada. Espere o indicador ficar verde antes de tirar.</p>
+        <p>Na primeira vez, o celular pede permissão de <b>câmera</b> e de <b>localização</b>. Escolha permitir nas duas.</p>
+        <p class="note">Se a câmera do app não abrir, o app usa a câmera do aparelho e pega a coordenada no momento do toque. Fotos escolhidas da galeria dependem da coordenada que o celular manteve na imagem; quando não há, a foto aparece como "Sem GPS" e você informa a coordenada. No pacote exportado, a coordenada e a data ficam escritas dentro da imagem.</p>
+      </div></details>
+      ${ph.length?`<div class="photos">${ph.map((x,i)=>rowPhoto(x,fm.get(x.id),i,ph.length)).join('')}</div>`:'<div class="empty">Nenhuma foto neste ponto. Use os botões abaixo para tirar uma foto agora ou anexar fotos. Quando a foto traz a posição GPS, a coordenada é lida sozinha.</div>'}
+    </section>
+    <section class="stack">
+      <div class="sec-h"><h2>Notas de voz</h2><button class="btn small" data-act="add-audio" data-kind="point" data-id="${pt.id}">${I.mic}Adicionar áudio</button></div>
+      ${au.length?au.map(a=>rowAudio(a)).join(''):'<p class="note">Nenhum áudio neste ponto.</p>'}
+    </section>
+    ${delBtn('pt'+pt.id,'del-point',pt.id,'Excluir ponto')}
+  </main>
+  <div class="dock"><div class="in"><button class="btn primary" data-act="add-cam">${I.cam}Tirar foto agora</button><button class="btn" data-act="add-gal">${I.img}Anexar fotos</button></div></div>`;
+}
+function rowPhoto(x,fig,i,n){
+  const t=thumbs.get(x.id);
+  const gps=x.lat!=null?`<span class="mono">${x.lat.toFixed(5)}, ${x.lon.toFixed(5)}</span>${x.acc!=null?`<span class="mono muted">±${Math.round(x.acc)} m</span>`:''}`:`<button class="tag warn" data-act="coord-open" data-id="${x.id}">${x.hasExif?'Sem GPS':'Sem metadados'} · informar</button>`;
+  return `<div class="ph${x.usar?'':' off'}">
+    <div class="thumb">${t?`<img src="${t}" alt="Miniatura de ${esc(x.name)}">`:`<span>${esc(extOf(x.name,'foto').toUpperCase())}<br>sem miniatura</span>`}${fig?`<span class="fig">Fig. ${fig}</span>`:''}</div>
+    <div class="body">
+      <input type="text" id="f-leg-${x.id}" data-t="photos" data-id="${x.id}" data-p="legenda" value="${esc(x.legenda)}" placeholder="Legenda da figura" aria-label="Legenda da foto ${esc(x.name)}">
+      <div class="meta">${gps}${x.date?`<span class="mono muted">${fmtData(x.date)} ${x.date.slice(11,16)}</span>`:''}</div>
+      ${ui.openCoord===x.id?`<input type="text" class="err-able" id="c-${x.id}" data-coord="photo" data-id="${x.id}" placeholder="-21.948286, -47.120197" aria-label="Coordenada da foto">`:''}
+      <div class="ctl">
+        <label class="chk"><input type="checkbox" data-t="photos" data-id="${x.id}" data-p="usar" data-rerender="1"${x.usar?' checked':''}>No relatório</label>
+        <label class="chk"><input type="checkbox" data-t="photos" data-id="${x.id}" data-p="tipo" data-drone="1" data-rerender="1"${x.tipo==='drone'?' checked':''}>Drone</label>
+        <span style="flex:1"></span>
+        <button class="mini" data-act="mv-photo" data-id="${x.id}" data-d="-1" aria-label="Mover para cima"${i===0?' disabled':''}>${I.up}</button>
+        <button class="mini" data-act="mv-photo" data-id="${x.id}" data-d="1" aria-label="Mover para baixo"${i===n-1?' disabled':''}>${I.down}</button>
+        <button class="mini" data-act="del-photo" data-id="${x.id}" aria-label="Excluir foto" style="${ui.confirm==='ph'+x.id?'background:var(--bad);color:var(--surface);border-color:var(--bad)':'color:var(--bad)'}">${I.trash}</button>
+      </div>
+    </div></div>`;
+}
+function rowAudio(a){
+  const mb=(a.size/1048576).toFixed(1).replace('.',',');
+  return `<div class="card stack" style="padding:10px 12px"><div class="meta" style="justify-content:space-between;flex-wrap:nowrap"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)} <span class="mono muted">${mb} MB</span></span>
+    <span class="meta" style="flex:none"><button class="btn small" data-act="play-audio" data-id="${a.id}">Ouvir</button><button class="mini" data-act="del-audio" data-id="${a.id}" aria-label="Excluir áudio" style="${ui.confirm==='au'+a.id?'background:var(--bad);color:var(--surface);border-color:var(--bad)':'color:var(--bad)'}">${I.trash}</button></span></div><div id="pl-${a.id}"></div></div>`;
+}
+function rowRelato(r){
+  return `<div class="card stack">
+    <div class="two">
+      ${fld('Quem relatou',`<select id="f-rf-${r.id}" data-t="relatos" data-id="${r.id}" data-p="fonte">${Object.keys(RELATO_FONTES).map(k=>`<option value="${k}"${k===r.fonte?' selected':''}>${RELATO_FONTES[k]}</option>`).join('')}</select>`,`f-rf-${r.id}`)}
+      ${fld('Nome e contato',inp('relatos',r.id,'quem',r.quem,'placeholder="Nome, cargo, WhatsApp ou e-mail"'),`f-quem-${r.id}`)}
+    </div>
+    ${fld('Relato',ta('relatos',r.id,'texto',r.texto,'style="min-height:84px" placeholder="O que a pessoa contou"'),`f-texto-${r.id}`)}
+    <button class="btn danger small${ui.confirm==='rl'+r.id?' armed':''}" data-act="del-relato" data-id="${r.id}" style="align-self:flex-start">${I.trash}${ui.confirm==='rl'+r.id?'Toque de novo para excluir':'Excluir relato'}</button>
+  </div>`;
+}
+function rowAnexo(a){
+  const t=a.img?thumbs.get(a.id):null;
+  const sz=a.size>=1048576?(a.size/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(a.size/1024))+' KB';
+  return `<div class="card" style="padding:10px 12px"><div class="meta" style="flex-wrap:nowrap;align-items:flex-start;gap:12px">
+    <div class="thumb" style="width:56px;height:56px;flex:none">${t?`<img src="${t}" alt="">`:`<span>${a.img?'IMG':'PDF'}</span>`}</div>
+    <div class="stack" style="min-width:0;flex:1;gap:6px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)} <span class="mono muted">${sz}</span></div>
+    <input type="text" id="f-adesc-${a.id}" data-t="anexos" data-id="${a.id}" data-p="desc" value="${esc(a.desc)}" placeholder="O que é este documento" aria-label="Descrição do anexo ${esc(a.name)}" style="min-height:40px;padding:6px 10px;font-size:15px"></div>
+    <button class="mini" data-act="del-anexo" data-id="${a.id}" aria-label="Excluir anexo" style="${ui.confirm==='an'+a.id?'background:var(--bad);color:var(--surface);border-color:var(--bad)':'color:var(--bad)'}">${I.trash}</button></div></div>`;
+}
+function vMeeting(){
+  const m=by(S.meetings,ui.mid),v=by(S.visits,m.visitId);
+  const au=audiosOf('meet',m.id),an=anexosOf(m.id);
+  return header(m.orgao||'Nova reunião',visitLabel(v),true)+`<main class="wrap">
+    <section class="card stack">
+      ${fld('Órgão ou instituição',inp('meetings',m.id,'orgao',m.orgao,'list="orgaos" placeholder="Secretaria de Obras"'),`f-orgao-${m.id}`)}
+      <datalist id="orgaos"><option value="Secretaria de Meio Ambiente"><option value="Secretaria de Obras"><option value="Secretaria de Drenagem"><option value="Secretaria de Saúde"><option value="Concessionária de água e esgoto"><option value="Vigilância Sanitária"></datalist>
+      ${fld('Data da reunião',`<input type="date" id="f-data-${m.id}" data-t="meetings" data-id="${m.id}" data-p="data" value="${esc(m.data)}">`,`f-data-${m.id}`)}
+      ${fld('Contatos',ta('meetings',m.id,'contatos',m.contatos,'style="min-height:88px" placeholder="Um por linha, com nome, cargo e WhatsApp ou e-mail. Ex.: Eduardo, Prefeitura, (19) 99999-0000"'),`f-contatos-${m.id}`)}
+      <div class="field"><span class="lab">Eixos tratados</span><div class="ctl">${EK.map(k=>`<label class="chk"><input type="checkbox" data-eixo="${k}" data-id="${m.id}"${(m.eixos||[]).includes(k)?' checked':''}>${EIXOS[k].nome}</label>`).join('')}</div></div>
+      ${fld('Notas da reunião',ta('meetings',m.id,'notas',m.notas,'placeholder="O que foi informado, números citados, decisões"'),`f-notas-${m.id}`)}
+      ${fld('Documentos e dados que o órgão vai enviar',ta('meetings',m.id,'docs',m.docs,'placeholder="Um item por linha, com o prazo combinado quando houver"'),`f-docs-${m.id}`)}
+    </section>
+    <section class="stack">
+      <div class="sec-h"><h2>Áudio da reunião</h2><button class="btn small" data-act="add-audio" data-kind="meet" data-id="${m.id}">${I.mic}Adicionar áudio</button></div>
+      ${au.length?au.map(a=>rowAudio(a)).join(''):'<p class="note">Nenhum áudio nesta reunião.</p>'}
+    </section>
+    <section class="stack">
+      <div class="sec-h"><h2>Anexos recebidos</h2><button class="btn small" data-act="add-anexo">${I.plus}Anexar PDF ou imagem</button></div>
+      ${an.length?an.map(a=>rowAnexo(a)).join(''):'<p class="note">Nenhum anexo nesta reunião. Documentos e fotos que o órgão enviar na hora podem ser guardados aqui.</p>'}
+    </section>
+    <section class="card stack">
+      ${fld('Transcrição',ta('meetings',m.id,'transcricao',m.transcricao,'style="min-height:160px" placeholder="Cole aqui a transcrição, se já tiver. O áudio segue no pacote de qualquer forma."'),`f-transcricao-${m.id}`)}
+    </section>
+    ${delBtn('mt'+m.id,'del-meeting',m.id,'Excluir reunião')}
+  </main>`;
+}
+
+function render(top){
+  const y=window.scrollY;
+  const v={home:vHome,project:vProject,visit:vVisit,point:vPoint,meeting:vMeeting}[ui.view];
+  app.innerHTML=v();
+  window.scrollTo(0,top?0:y);
+}
+function go(view,extra,top=true){Object.assign(ui,{view,confirm:null,openCoord:null,draft:null},extra||{});render(top)}
+let toastT=null;
+function toast(msg,keep){
+  const t=$('#toast');t.textContent=msg;t.classList.add('on');
+  clearTimeout(toastT);if(!keep)toastT=setTimeout(()=>t.classList.remove('on'),3800);
+}
+
+/* ---------- ações ---------- */
+function back(){
+  if(ui.view==='point'||ui.view==='meeting'){const pt=ui.view==='point'?by(S.points,ui.ptid):by(S.meetings,ui.mid);go('visit',{vid:pt.visitId,tab:ui.view==='point'?'pontos':'reunioes'})}
+  else if(ui.view==='visit')go('project',{pid:by(S.visits,ui.vid).projectId});
+  else if(ui.view==='project')go('home');
+}
+async function purgeVisit(vid){
+  const pts=S.points.filter(x=>x.visitId===vid).map(x=>x.id),ms=S.meetings.filter(x=>x.visitId===vid).map(x=>x.id);
+  const ph=S.photos.filter(x=>pts.includes(x.pointId)).map(x=>x.id);
+  const au=S.audios.filter(a=>(a.kind==='point'&&pts.includes(a.ownerId))||(a.kind==='meet'&&ms.includes(a.ownerId))).map(a=>a.id);
+  const an=S.anexos.filter(a=>ms.includes(a.meetingId)).map(a=>a.id);
+  S.photos=S.photos.filter(x=>!ph.includes(x.id));S.audios=S.audios.filter(a=>!au.includes(a.id));S.anexos=S.anexos.filter(a=>!an.includes(a.id));
+  S.relatos=S.relatos.filter(r=>!pts.includes(r.pointId));
+  S.points=S.points.filter(x=>x.visitId!==vid);S.meetings=S.meetings.filter(x=>x.visitId!==vid);S.visits=S.visits.filter(x=>x.id!==vid);
+  await dropFiles([...ph,...au,...an]);
+}
+async function act(a,d){
+  switch(a){
+    case 'back':return back();
+    case 'new-project':ui.newProject=!ui.newProject;return render();
+    case 'create-project':{
+      const mun=$('#np-mun').value.trim();if(!mun){$('#np-mun').classList.add('err');toast('Informe o município.');return}
+      const p={id:uid(),municipio:mun,uf:$('#np-uf').value.trim().toUpperCase(),tipo:$('#np-tipo').value.trim()||'PMSB',contratante:$('#np-con').value.trim(),contatos:'',fonte:'Saneplan',ultimaFigura:0};
+      S.projects.push(p);save();ui.newProject=false;return go('project',{pid:p.id});
+    }
+    case 'open-project':return go('project',{pid:d.id,newVisit:false});
+    case 'new-visit':ui.newVisit=!ui.newVisit;return render();
+    case 'create-visit':{
+      const v={id:uid(),projectId:ui.pid,titulo:$('#nv-tit').value.trim(),data:$('#nv-data').value||today(),equipe:'',inicioFig:null};
+      S.visits.push(v);save();ui.newVisit=false;return go('visit',{vid:v.id,tab:'pontos'});
+    }
+    case 'open-visit':return go('visit',{vid:d.id,tab:'pontos',newPoint:false});
+    case 'tab':ui.tab=d.id;ui.draft=null;return render();
+    case 'new-point':ui.newPoint=!ui.newPoint;return render();
+    case 'create-point':{
+      const eixo=$('#npt-eixo').value;ui.lastEixo=eixo;
+      const pt={id:uid(),visitId:ui.vid,eixo,nome:$('#npt-nome').value.trim(),localizacao:'',lat:null,lon:null,descricao:'',informante:''};
+      S.points.push(pt);save();ui.newPoint=false;return go('point',{ptid:pt.id});
+    }
+    case 'open-point':return go('point',{ptid:d.id});
+    case 'new-meeting':{
+      const m={id:uid(),visitId:ui.vid,orgao:'',contatos:'',data:by(S.visits,ui.vid).data,eixos:[],notas:'',docs:'',transcricao:''};
+      S.meetings.push(m);save();return go('meeting',{mid:m.id});
+    }
+    case 'open-meeting':return go('meeting',{mid:d.id});
+    case 'add-gal':return $('#in-gal').click();
+    case 'add-cam':if(camOK())return openCam(ui.ptid);return nativeCam();
+    case 'coord-here':{
+      toast('Obtendo a localização…',true);
+      const f=await GPS.once();
+      if(!f){toast('Não foi possível obter a localização. Verifique a permissão de localização deste site.');return}
+      const pt=by(S.points,d.id);pt.lat=f.lat;pt.lon=f.lon;save();render();toast(`Coordenada do ponto atualizada (±${Math.round(f.acc)} m).`);return;
+    }
+    case 'add-audio':ui.audTarget={kind:d.kind,id:d.id};return $('#in-aud').click();
+    case 'add-anexo':return $('#in-anx').click();
+    case 'add-relato':S.relatos.push({id:uid(),pointId:ui.ptid,fonte:'municipe',quem:'',texto:'',order:Date.now()});save();return render();
+    case 'del-relato':if(!sure('rl'+d.id))return;{S.relatos=S.relatos.filter(r=>r.id!==d.id);save();return render()}
+    case 'del-anexo':if(!sure('an'+d.id))return;{S.anexos=S.anexos.filter(x=>x.id!==d.id);await dropFiles([d.id]);save();return render()}
+    case 'mv-photo':{
+      const x=by(S.photos,d.id),l=photosOf(x.pointId),i=l.indexOf(x),o=l[i+Number(d.d)];
+      if(o){const t=x.order;x.order=o.order;o.order=t;save();render()}return;
+    }
+    case 'del-photo':if(!sure('ph'+d.id))return;{const x=by(S.photos,d.id);S.photos=S.photos.filter(p=>p!==x);await dropFiles([d.id]);save();return render()}
+    case 'coord-open':ui.openCoord=ui.openCoord===d.id?null:d.id;render();{const e=$('#c-'+d.id);if(e)e.focus()}return;
+    case 'coord-from-photo':{const pt=by(S.points,d.id),x=photosOf(pt.id).find(p=>p.lat!=null);if(x){pt.lat=x.lat;pt.lon=x.lon;save();render()}return}
+    case 'play-audio':{
+      const box=$('#pl-'+d.id);if(box.firstChild){box.innerHTML='';return}
+      const b=await getFile(d.id);if(!b){toast('Arquivo de áudio não encontrado neste aparelho.');return}
+      const el=document.createElement('audio');el.controls=true;el.src=URL.createObjectURL(b);box.appendChild(el);return;
+    }
+    case 'del-audio':if(!sure('au'+d.id))return;{S.audios=S.audios.filter(x=>x.id!==d.id);await dropFiles([d.id]);save();return render()}
+    case 'del-point':if(!sure('pt'+d.id))return;{
+      const pt=by(S.points,d.id),ph=S.photos.filter(x=>x.pointId===pt.id).map(x=>x.id),au=S.audios.filter(x=>x.kind==='point'&&x.ownerId===pt.id).map(x=>x.id);
+      S.photos=S.photos.filter(x=>x.pointId!==pt.id);S.audios=S.audios.filter(x=>!au.includes(x.id));S.points=S.points.filter(x=>x!==pt);S.relatos=S.relatos.filter(r=>r.pointId!==pt.id);
+      await dropFiles([...ph,...au]);save();return go('visit',{vid:pt.visitId,tab:'pontos'});
+    }
+    case 'del-meeting':if(!sure('mt'+d.id))return;{
+      const m=by(S.meetings,d.id),au=S.audios.filter(x=>x.kind==='meet'&&x.ownerId===m.id).map(x=>x.id),an=S.anexos.filter(x=>x.meetingId===m.id).map(x=>x.id);
+      S.audios=S.audios.filter(x=>!au.includes(x.id));S.anexos=S.anexos.filter(x=>!an.includes(x.id));S.meetings=S.meetings.filter(x=>x!==m);await dropFiles([...au,...an]);save();return go('visit',{vid:m.visitId,tab:'reunioes'});
+    }
+    case 'del-visit':if(!sure('vis'+d.id))return;{const pid=by(S.visits,d.id).projectId;await purgeVisit(d.id);save();return go('project',{pid})}
+    case 'del-project':if(!sure('proj'+d.id))return;{
+      for(const v of S.visits.filter(x=>x.projectId===d.id))await purgeVisit(v.id);
+      S.projects=S.projects.filter(p=>p.id!==d.id);save();return go('home');
+    }
+    case 'goto-issue':{
+      const x=issues(by(S.visits,ui.vid))[Number(d.i)];if(!x)return;
+      return x.k==='point'?go('point',{ptid:x.id}):go('meeting',{mid:x.id});
+    }
+    case 'copy-draft':{
+      const v=by(S.visits,ui.vid),md=buildMd(v,plan(v));
+      try{await navigator.clipboard.writeText(md);toast('Rascunho copiado.')}
+      catch(e){ui.draft=md;render();const t=$('#draft');if(t){t.focus();t.select()}toast('Copie o texto abaixo.')}
+      return;
+    }
+    case 'export-zip':return exportZip();
+  }
+}
+async function exportZip(){
+  const v=by(S.visits,ui.vid),p=proj(v.projectId),pl=plan(v);
+  const btn=$('#btn-zip'),st=$('#exp-status');
+  const hasMeet=S.meetings.some(m=>m.visitId===v.id);
+  if(!pl.figs.length&&!pl.unused.length&&!hasMeet&&!S.points.some(x=>x.visitId===v.id)){toast('Ainda não há nada para exportar nesta visita.');return}
+  btn.disabled=true;
+  try{
+    const root=pl.base,E=[],audioNames={};let missing=0;
+    st.textContent='Preparando documentos…';
+    const stamp=v.carimbo!==false,keep=!!v.originais;let stampFail=0,nf=0;
+    for(const f of pl.figs){
+      st.textContent=`Preparando foto ${++nf} de ${pl.figs.length}…`;
+      const b=await getFile(f.photo.id);if(!b){missing++;continue}
+      let out=b,name=f.file;
+      if(stamp&&f.photo.lat!=null){
+        const s=await stampBlob(b,f.photo);
+        if(s)out=s;else{stampFail++;name=name.replace(/\.[^.]+$/,'.'+extOf(f.photo.name,'jpg'))}
+      }
+      E.push({name:`${root}/fotos/${name}`,blob:out});
+      if(keep&&out!==b)E.push({name:`${root}/originais/${f.file.replace(/\.[^.]+$/,'')}_original.${extOf(f.photo.name,'jpg')}`,blob:b});
+    }
+    for(const u of pl.unused){const b=await getFile(u.photo.id);if(b)E.push({name:`${root}/nao_usadas/${u.file}`,blob:b});else missing++}
+    let k=0;
+    for(const g of pl.groups)for(const it of g.items){
+      for(const a of audiosOf('point',it.pt.id)){
+        const b=await getFile(a.id);if(!b){missing++;continue}
+        const nm=`P${EIXOS[g.eixo].tag}${pad(it.pn)}_${camel(it.pt.nome).slice(0,28)||'Ponto'}_${pad(++k)}.${extOf(a.name,'m4a')}`;
+        E.push({name:`${root}/audios/${nm}`,blob:b});
+      }
+    }
+    const ms=S.meetings.filter(m=>m.visitId===v.id);
+    for(let i=0;i<ms.length;i++){
+      const m=ms[i],tag=`Reuniao${pad(i+1)}_${camel(m.orgao).slice(0,28)||'SemOrgao'}`;
+      audioNames[m.id]=[];let j=0;
+      for(const a of audiosOf('meet',m.id)){
+        const b=await getFile(a.id);if(!b){missing++;continue}
+        const nm=`${tag}_${pad(++j)}.${extOf(a.name,'m4a')}`;audioNames[m.id].push(nm);
+        E.push({name:`${root}/audios/${nm}`,blob:b});
+      }
+      const xs=anexosOf(m.id);
+      for(let k=0;k<xs.length;k++){const b=await getFile(xs[k].id);if(!b){missing++;continue}E.push({name:`${root}/anexos/${anexoFile(i,m,k+1,xs[k])}`,blob:b})}
+      if(String(m.transcricao||'').trim())E.push({name:`${root}/transcricoes/${tag}.txt`,text:`Reunião: ${m.orgao}\nData: ${fmtData(m.data)}\nContatos: ${m.contatos}\n\nNotas\n${m.notas||''}\n\nTranscrição\n${m.transcricao}\n`});
+    }
+    const md=buildMd(v,pl);
+    E.unshift(
+      {name:`${root}/relatorio_rascunho.md`,text:md},
+      {name:`${root}/fotos.csv`,text:'\uFEFF'+buildCsv(v,pl)},
+      {name:`${root}/pontos.csv`,text:'\uFEFF'+buildPontosCsv(v,pl)},
+      {name:`${root}/fotos.geojson`,text:buildGeo(v,pl)},
+      {name:`${root}/dados.json`,text:buildJson(v,pl,audioNames)}
+    );
+    const blob=await makeZip(E,(i,n)=>{st.textContent=`Compactando ${i} de ${n} arquivos…`});
+    const dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
+    const filename=`${root}.zip`;
+    if(dl){await dl.save({filename,data:blob})}
+    else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove()}
+    v.inicioFig=pl.start;
+    if(pl.figs.length)p.ultimaFigura=Math.max(p.ultimaFigura||0,pl.end);
+    save();
+    st.textContent=`Pacote ${filename} gerado${missing?`, mas ${missing} arquivo(s) não foram encontrados neste aparelho`:''}${stampFail?`; ${stampFail} foto(s) não puderam receber o texto e seguem como estavam`:''}. A última figura do projeto agora é ${p.ultimaFigura}.`;
+    toast('Pacote pronto.');
+  }catch(e){
+    if(e&&e.code==='declined'){st.textContent='Salvamento cancelado. Nada foi alterado.'}
+    else{st.textContent=`Não foi possível gerar o pacote${e&&(e.message||e.code)?': '+(e.message||e.code):''}.`}
+  }finally{btn.disabled=false}
+}
+
+function onField(e){
+  const el=e.target;
+  if(el.dataset.coord){
+    if(e.type!=='change')return;
+    const c=parseCoord(el.value);
+    if(!c){if(el.value.trim()===''&&el.dataset.coord==='point'){const pt=by(S.points,el.dataset.id);pt.lat=pt.lon=null;save();return}
+      el.classList.add('err');toast('Use o formato -21.948286, -47.120197');return}
+    if(el.dataset.coord==='point'){const pt=by(S.points,el.dataset.id);pt.lat=c.lat;pt.lon=c.lon}
+    else{const x=by(S.photos,el.dataset.id);x.lat=c.lat;x.lon=c.lon;x.acc=null;ui.openCoord=null}
+    save();render();return;
+  }
+  if(el.dataset.eixo){
+    const m=by(S.meetings,el.dataset.id),s=new Set(m.eixos||[]);
+    if(el.checked)s.add(el.dataset.eixo);else s.delete(el.dataset.eixo);
+    m.eixos=EK.filter(k=>s.has(k));save();return;
+  }
+  const t=el.dataset.t;if(!t)return;
+  if(el.type==='checkbox'&&e.type==='input')return;
+  const rec=by(S[t],el.dataset.id);if(!rec)return;
+  const p=el.dataset.p;
+  if(el.dataset.drone)rec.tipo=el.checked?'drone':'campo';
+  else if(el.type==='checkbox')rec[p]=el.checked;
+  else if(el.dataset.num)rec[p]=el.value===''?null:Math.max(0,Math.floor(Number(el.value)));
+  else rec[p]=el.value;
+  save();
+  if(el.dataset.rerender&&e.type==='change')render();
+}
+
+app.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled)act(b.dataset.act,b.dataset)});
+app.addEventListener('input',onField);
+app.addEventListener('change',onField);
+$('#in-gal').addEventListener('change',e=>{const f=[...e.target.files];e.target.value='';if(f.length)addPhotos(f,ui.ptid)});
+$('#in-cam').addEventListener('change',async e=>{
+  const f=[...e.target.files];e.target.value='';if(!f.length)return;
+  let fix=null;
+  try{fix=await Promise.race([ui.camFixP||null,new Promise(r=>setTimeout(()=>r(null),4000))])}catch(_){}
+  ui.camFixP=null;addPhotos(f,ui.ptid,{fix});
+});
+$('#in-aud').addEventListener('change',e=>{const f=[...e.target.files];e.target.value='';if(f.length)addAudios(f,ui.audTarget)});
+$('#in-anx').addEventListener('change',e=>{const f=[...e.target.files];e.target.value='';if(f.length)addAnexos(f,ui.mid)});
+
+function migrar(){
+  S.points.forEach(p=>{
+    if(String(p.informante||'').trim()&&!S.relatos.some(r=>r.pointId===p.id)){
+      S.relatos.push({id:uid(),pointId:p.id,fonte:'outro',quem:p.informante,texto:'',order:Date.now()});p.informante='';
+    }
+  });
+}
+(async function init(){
+  let fresh=true;
+  try{
+    idb=await Promise.race([openDB(),new Promise(r=>setTimeout(()=>r(null),3000))]);
+    if(idb){
+      try{
+        const raw=await tx('meta','readonly',s=>s.get('state'));
+        if(raw){const s=JSON.parse(raw);S=Object.assign({projects:[],visits:[],points:[],photos:[],meetings:[],audios:[],anexos:[],relatos:[]},s);fresh=false}
+        await loadThumbs();
+      }catch(e){storageOK=false}
+    }
+  }catch(e){idb=null}
+  if(fresh){seed();save()}else{migrar()}
+  render();
+})();
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+
+</body></html>

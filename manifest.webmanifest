@@ -1,0 +1,17 @@
+{
+  "name": "Caderneta de Campo · Saneplan",
+  "short_name": "Caderneta",
+  "description": "Registro de visitas técnicas com fotos, coordenadas e reuniões.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F1F5F5",
+  "theme_color": "#0B5D6B",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
